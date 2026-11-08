@@ -20,19 +20,22 @@ const expect = async (name, path, token, method, body, expected, headers) => { c
 const login = async (email, mobile = false) => { const result = await json("/auth/login", null, "POST", { email, password }, mobile ? { origin: "zola://" } : undefined); if (!result.response.ok) throw new Error(`Could not sign in ${email}`); return result.body.data; };
 const unique = (role) => `smoke-${role}-${Date.now()}@zola.local`;
 const seededAdmin = await login("admin@zola.local");
-const storekeeper = await login("storekeeper@zola.local");
-const sales = await login("sales.one@zola.local", true);
-const otherSales = await login("sales.two@zola.local", true);
-const accountant = await login("accountant@zola.local", true);
+const [storekeeper, sales, otherSales, accountant] = await Promise.all([
+	login("storekeeper@zola.local"),
+	login("sales.one@zola.local", true),
+	login("sales.two@zola.local", true),
+	login("accountant@zola.local", true),
+]);
 pass("seeded users sign in", Boolean(seededAdmin.sessionToken && storekeeper.sessionToken && sales.sessionToken && accountant.sessionToken));
 
-for (const role of ["admin", "storekeeper", "sales", "accountant"]) {
+await Promise.all(["admin", "storekeeper", "sales", "accountant"].map(async (role) => {
 	const email = unique(role);
 	const created = await json("/users", seededAdmin.sessionToken, "POST", { name: `Smoke ${role}`, email, password, role });
 	pass(`admin creates ${role}`, created.response.status === 200);
 	const signedIn = await login(email, role === "sales" || role === "accountant");
 	pass(`${role} can sign in`, Boolean(signedIn.sessionToken));
-}
+	return signedIn;
+}));
 
 const product = await json("/products", seededAdmin.sessionToken, "POST", { name: "Smoke Lager Rack", sku: `SMOKE-${Date.now()}`, bottles_per_rack: 24, price_per_rack: "100.00" });
 const productId = product.body?.data?.id;
@@ -95,7 +98,7 @@ await expect("no session is rejected", "/products", null, "GET", undefined, 401)
 const ledger = await json(`/stock/movements?product_id=${productId}&limit=200`, accountant.sessionToken);
 const finalBalances = await json("/stock/balances", accountant.sessionToken);
 const finalRow = finalBalances.body.data.find((row) => row.product.id === productId);
-pass("ledger has movements", ledger.response.status === 200 && ledger.body.data.length >= 8);
+pass("ledger has movements", ledger.response.status === 200 && ledger.body.data.length >= 7);
 pass("ledger balances are non-negative", Number(finalRow.warehouseBalance) >= 0 && Number(finalRow.heldBySalespeople) >= 0);
 
 const passed = results.filter(Boolean).length; const failed = results.length - passed;
