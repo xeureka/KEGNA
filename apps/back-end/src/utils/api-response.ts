@@ -36,7 +36,7 @@ export type SuccessResponse<T> = {
  * "details" is optional and omitted entirely from the JSON when not provided:
  * {
  *   "success": false,
- *   "error": { "code": "NOT_FOUND", "message": "Appointment not found" }
+ *   "error": { "code": "NOT_FOUND", "message": "Product not found" }
  * }
  */
 export type ErrorResponse = {
@@ -60,7 +60,7 @@ export type ErrorResponse = {
  *   return successResponse(c, { id: "apt_123", status: "confirmed" });
  *   // -> HTTP 200, { success: true, data: {...} }
  *
- *   return successResponse(c, createdAppointment, 201);
+ *   return successResponse(c, createdProduct, 201);
  *   // -> HTTP 201, { success: true, data: {...} }
  */
 export function successResponse<T>(

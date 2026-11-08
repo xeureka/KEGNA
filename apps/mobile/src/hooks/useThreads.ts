@@ -7,7 +7,7 @@ import { errorMessage } from "../utils/errors";
 import { useAppPolling } from "./useAppPolling";
 
 function sortByActivity(rows: ThreadRow[]) {
-	return [...rows].sort((a, b) => {
+	return rows.toSorted((a, b) => {
 		const first = new Date(a.lastEventAt ?? a.issue.issuedAt).getTime();
 		const second = new Date(b.lastEventAt ?? b.issue.issuedAt).getTime();
 		return second - first;

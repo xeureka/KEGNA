@@ -25,6 +25,10 @@ function dateValue(value: string | Date | null | undefined) {
 	return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function sameCalendarDay(a: Date, b: Date) {
+	return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
 export function formatTime(value: string | Date | null | undefined) {
 	const date = dateValue(value);
 	if (!date) return "";
@@ -64,12 +68,8 @@ export function formatDayLabel(value: string | Date) {
 	const now = new Date();
 	const yesterday = new Date(now);
 	yesterday.setDate(now.getDate() - 1);
-	const sameDay = (a: Date, b: Date) =>
-		a.getFullYear() === b.getFullYear() &&
-		a.getMonth() === b.getMonth() &&
-		a.getDate() === b.getDate();
-	if (sameDay(date, now)) return "Today";
-	if (sameDay(date, yesterday)) return "Yesterday";
+	if (sameCalendarDay(date, now)) return "Today";
+	if (sameCalendarDay(date, yesterday)) return "Yesterday";
 	return formatDate(date);
 }
 

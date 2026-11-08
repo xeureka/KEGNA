@@ -10,7 +10,7 @@ const PAGE_SIZE = 100;
 function mergeEvents(current: ThreadEvent[], incoming: ThreadEvent[]) {
 	const byId = new Map(current.map((event) => [event.id, event]));
 	for (const event of incoming) byId.set(event.id, event);
-	return [...byId.values()].sort(
+	return [...byId.values()].toSorted(
 		(a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
 	);
 }

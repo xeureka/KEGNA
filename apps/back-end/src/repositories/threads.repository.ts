@@ -9,7 +9,7 @@ export class ThreadsRepository {
 	}
 	async events(issueId: string, before?: Date, limit = 50) {
 		const rows = await db.select({ id: threadEvents.id, issueId: threadEvents.issueId, actorId: threadEvents.actorId, type: threadEvents.type, payload: threadEvents.payload, createdAt: threadEvents.createdAt, actorName: users.name }).from(threadEvents).leftJoin(users, eq(users.id, threadEvents.actorId)).where(and(eq(threadEvents.issueId, issueId), before ? lt(threadEvents.createdAt, before) : undefined)).orderBy(desc(threadEvents.createdAt)).limit(limit);
-		return rows.reverse();
+		return rows.toReversed();
 	}
 	upsertRead(userId: string, issueId: string, lastReadAt: Date) { return db.insert(threadReads).values({ userId, issueId, lastReadAt }).onConflictDoUpdate({ target: [threadReads.userId, threadReads.issueId], set: { lastReadAt } }); }
 }

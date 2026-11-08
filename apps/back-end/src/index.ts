@@ -4,9 +4,10 @@ import "./lib/env";
 import { checkDatabaseConnection } from "./db/health";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
+import { env } from "./lib/env";
 
-const port = process.env.PORT ? Number(process.env.PORT) : 3001;
-const hostname = "0.0.0.0";
+const port = env.PORT;
+const hostname = env.HOST;
 
 function logFatalError(label: string, error: unknown) {
 	console.error(label, error);

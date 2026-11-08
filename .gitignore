@@ -14,6 +14,7 @@ build/
 .env.local
 .env.*.local
 DEV-CREDENTIALS.md
+credentials.md
 
 # Logs & Runtime Data
 logs/
