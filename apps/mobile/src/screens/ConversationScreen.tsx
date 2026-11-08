@@ -1,0 +1,51 @@
+import { useEffect, useMemo, useState } from "react";
+import { Alert, KeyboardAvoidingView, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, View } from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import type { RouteProp } from "@react-navigation/native";
+import { Composer } from "../components/Composer";
+import { DateSeparator } from "../components/DateSeparator";
+import { ErrorState } from "../components/ErrorState";
+import { EventCard } from "../components/EventCard";
+import { LoadingState } from "../components/LoadingState";
+import { MessageBubble } from "../components/MessageBubble";
+import { ReconciliationCard } from "../components/ReconciliationCard";
+import { ReportSheet } from "../components/ReportSheet";
+import { StatusLabel } from "../components/StatusLabel";
+import { Text } from "../components/Text";
+import { TextInput } from "../components/TextInput";
+import { useAuth } from "../context/AuthContext";
+import { useIssue } from "../hooks/useIssue";
+import { useThreadEvents } from "../hooks/useThreadEvents";
+import { useVerifyReport } from "../hooks/useInventoryActions";
+import { markThreadRead, postComment, submitReport } from "../api/client";
+import type { RootStackParamList } from "../navigation/AppNavigator";
+import { colors, spacing } from "../constants/colors";
+import { errorMessage } from "../utils/errors";
+import { formatDayLabel, formatTime, isSameDay } from "../utils/format";
+
+export function ConversationScreen() {
+	const navigation = useNavigation();
+	const route = useRoute<RouteProp<RootStackParamList, "Conversation">>();
+	const { session } = useAuth();
+	const { issue, loading, error, refresh } = useIssue(route.params.issueId);
+	const events = useThreadEvents(route.params.issueId);
+	const [comment, setComment] = useState("");
+	const [sending, setSending] = useState(false);
+	const [reportOpen, setReportOpen] = useState(false);
+	const [flagOpen, setFlagOpen] = useState(false);
+	const [flagNote, setFlagNote] = useState("");
+	const verify = useVerifyReport(issue?.report?.id ?? "", async () => { await refresh(); await events.refresh(); });
+
+	useEffect(() => { void markThreadRead(route.params.issueId).catch(() => undefined); }, [route.params.issueId]);
+	const send = async () => { if (!comment.trim() || sending) return; const text = comment.trim(); setComment(""); setSending(true); try { await postComment(route.params.issueId, text); await events.refresh(); await markThreadRead(route.params.issueId); } catch (e) { setComment(text); Alert.alert("Comment failed", errorMessage(e, "Could not post comment")); } finally { setSending(false); } };
+	const approve = () => Alert.alert("Approve report?", "This closes the salesperson's holding for sold racks.", [{ text: "Cancel", style: "cancel" }, { text: "Approve", onPress: () => void verify.verify({ decision: "approved" }) }]);
+	const flag = async () => { if (!flagNote.trim()) return; await verify.verify({ decision: "flagged", note: flagNote }); setFlagOpen(false); setFlagNote(""); };
+	const rendered = useMemo(() => events.events.map((event, index) => <View key={event.id}>{index === 0 || !isSameDay(events.events[index - 1].createdAt, event.createdAt) ? <DateSeparator label={formatDayLabel(event.createdAt)} /> : null}{event.type === "comment" ? <MessageBubble own={event.actorId === session?.user.id} name={event.actorId === session?.user.id ? undefined : "ZOLA team"} text={String(event.payload.text ?? "")} time={formatTime(event.createdAt)} /> : <MessageBubble time={formatTime(event.createdAt)}><EventCard event={event} /></MessageBubble>}</View>), [events.events, session?.user.id]);
+	if (loading) return <LoadingState label="Loading conversation" />;
+	if (error || !issue) return <ErrorState message={error ?? "Issue not found"} onRetry={refresh} />;
+	const accountant = session?.user.role === "accountant";
+	const reportable = session?.user.role === "sales" && issue.issue.status === "open";
+	const verifiable = Boolean(accountant && issue.report && ["reported", "returns_confirmed"].includes(issue.issue.status));
+	return <SafeAreaView style={styles.page}><View style={styles.header}><Pressable onPress={() => navigation.goBack()}><Text size={28}>‹</Text></Pressable><View style={styles.heading}><Text bold>{issue.issue.issueNo}</Text><StatusLabel status={issue.issue.status} /></View><View style={styles.avatar}><Text bold style={styles.avatarText}>{issue.salesperson.name.slice(0, 1).toUpperCase()}</Text></View></View><KeyboardAvoidingView style={styles.flex} behavior="padding"><ScrollView contentContainerStyle={styles.timeline}>{events.loading ? <LoadingState label="Loading messages" /> : rendered}{events.hasMore ? <Pressable onPress={() => void events.loadOlder()}><Text style={styles.loadOlder}>Load older messages</Text></Pressable> : null}</ScrollView>{verifiable ? <ReconciliationCard issue={issue} onApprove={approve} onFlag={() => setFlagOpen(true)} busy={verify.busy} /> : null}<Composer value={comment} onChange={setComment} onSend={() => void send()} busy={sending} action={reportable ? <Pressable onPress={() => setReportOpen(true)}><Text style={styles.action}>Report</Text></Pressable> : null}/></KeyboardAvoidingView><Modal visible={flagOpen} transparent animationType="slide" onRequestClose={() => setFlagOpen(false)}><View style={styles.modal}><View style={styles.sheet}><Text bold size={18}>Flag report</Text><TextInput multiline placeholder="Explain the discrepancy" value={flagNote} onChangeText={setFlagNote} style={styles.note}/><View style={styles.modalActions}><Pressable onPress={() => setFlagOpen(false)}><Text>Cancel</Text></Pressable><Pressable onPress={() => void flag()} disabled={verify.busy}><Text bold style={styles.action}>Flag</Text></Pressable></View></View></View></Modal><ReportSheet visible={reportOpen} issue={issue} onClose={() => setReportOpen(false)} onSubmit={async (input) => { await submitReport(issue.issue.id, input); await refresh(); await events.refresh(); }} /></SafeAreaView>;
+}
+const styles = StyleSheet.create({ page: { flex: 1, backgroundColor: colors.background }, flex: { flex: 1 }, header: { flexDirection: "row", alignItems: "center", padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface }, heading: { flex: 1, marginLeft: spacing.sm, gap: 2 }, avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.mint, alignItems: "center", justifyContent: "center" }, avatarText: { color: colors.primary }, timeline: { padding: spacing.md, paddingBottom: spacing.lg }, loadOlder: { color: colors.primary, textAlign: "center", padding: spacing.md }, action: { color: colors.primary, paddingHorizontal: spacing.sm }, modal: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.25)" }, sheet: { backgroundColor: colors.surface, padding: spacing.lg, gap: spacing.md, borderTopLeftRadius: 18, borderTopRightRadius: 18 }, note: { minHeight: 100, textAlignVertical: "top" }, modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: spacing.xl } });

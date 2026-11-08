@@ -1,0 +1,27 @@
+export const appConfig = {
+	name: "ZOLA",
+	slug: "zola",
+	scheme: "zola",
+	version: "1.0.0",
+	bundleIdentifier: "com.zola.app",
+	easProjectId: "807a1e65-5dc1-4f2b-ab1c-251964fb4d30",
+	assets: {
+		icon: "./assets/icon.png",
+		splash: "./assets/splash-icon.png",
+	},
+	colors: {
+		background: "#fbf9f4",
+		surface: "#ffffff",
+		ink: "#1b1c19",
+		muted: "#71716d",
+		primary: "#006044",
+		bright: "#1e7a5a",
+		mint: "#e8f5ee",
+		linen: "#efeee9",
+		border: "#e6e5e0",
+		sand: "#e5dfd1",
+		danger: "#c85332",
+		onPrimary: "#d8f7e7",
+		accent: "#ffc908",
+	},
+} as const;

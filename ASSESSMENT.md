@@ -165,6 +165,26 @@ These are blockers for the destructive portions of the requested downgrade. Phas
 
 ## Phase 5 — Mobile app assessment
 
+### Phase 5 progress
+
+The mobile migration was recovered from an incomplete working tree. The old
+dental/tenant/payment navigation and providers had already been removed, but
+`App.tsx` still imported those deleted modules and the inventory navigation
+screens were not yet present. The recovery replaced the stale root with the
+Better Auth role gate and a React Navigation stack for login, chat list,
+conversation, and profile. It added the Telegram-style list and conversation
+components, foreground/focus polling, unread/read handling, comments, and the
+accountant reconciliation actions. The chat loader now prevents overlapping
+requests, ignores results after unmount, and keeps the existing list during
+quiet poll failures.
+
+The remaining limitations are intentional MVP choices: native push is not
+configured, and the sales report/deposit sheet still needs the full image
+picker form wiring before this phase can be considered complete. Expo's local
+CLI is installed at SDK 57 and the mobile TypeScript/lint checks are the
+available local validation; the workspace Expo wrapper attempts an automatic
+pnpm install and is blocked by the environment's pnpm store database.
+
 | Path / item | What it does | Verdict |
 |---|---|---|
 | `apps/mobile/App.tsx`, `src/AppRoot.tsx` | Expo root with old dental, payment, language, notification, avatar and tenant providers. | KEEP Expo/React Native foundation; MODIFY to auth gate and chat navigation |

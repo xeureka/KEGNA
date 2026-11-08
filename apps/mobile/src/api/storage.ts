@@ -1,7 +1,6 @@
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
-/** SecureStore is native-only; web uses browser storage for the session token. */
 function webStorage() {
 	return typeof globalThis.localStorage === "undefined"
 		? null

@@ -1,62 +1,218 @@
-export type Screen =
-	| "back"
-	| "splash"
-	| "welcome"
-	| "login"
-	| "register"
-	| "otp"
-	| "completeProfile"
-	| "terms"
-	| "dentalHistory"
-	| "doctorDetails"
-	| "home"
-	| "appointments"
-	| "card"
-	| "cardInactive"
-	| "services"
-	| "serviceDetails"
-	| "payments"
-	| "paymentCheckout"
-	| "paymentProcessing"
-	| "paymentSuccess"
-	| "paymentFailed"
-	| "receipt"
-	| "profile"
-	| "notifications"
-	| "support"
-	| "settings"
-	| "editProfile"
-	| "booking"
-	| "appointmentConfirmation";
+export type RoleName = "admin" | "storekeeper" | "sales" | "accountant";
 
-export type RouteName = Exclude<Screen, "back">;
+export interface SessionUser {
+	id: string;
+	name: string;
+	email: string;
+	role: RoleName;
+}
 
-export type Language = "EN" | "አማ";
+export interface SessionData {
+	user: SessionUser;
+	sessionToken: string;
+	permissions: string[];
+}
 
-export type AppointmentService = {
-	id?: string;
-	title: string;
-	description: string;
-	duration: string;
-	price: string;
-	basePrice?: string;
-};
+export type IssueStatus =
+	| "open"
+	| "reported"
+	| "returns_confirmed"
+	| "verified"
+	| "flagged";
 
-export type Appointment = {
-	service: AppointmentService;
-	dentist: string;
-	date: number;
-	month: string;
-	time: string;
-	clinic: string;
-};
+export type ReportStatus = "submitted" | "verified" | "flagged";
+export type VerificationDecision = "approved" | "flagged";
 
-export type DentalService = {
-	title: string;
-	description: string;
-	detailedDescription: string;
-	duration: string;
-	price: string;
-	features: string[];
-	note: string;
-};
+export interface Product {
+	id: string;
+	name: string;
+	sku: string;
+	bottlesPerRack: number;
+	pricePerRack: string;
+	isActive: boolean;
+}
+
+export interface Issue {
+	id: string;
+	issueNo: string;
+	salesUserId: string;
+	issuedBy: string;
+	status: IssueStatus;
+	note: string | null;
+	issuedAt: string;
+	closedAt: string | null;
+}
+
+export interface Salesperson {
+	id: string;
+	name: string;
+	email?: string;
+}
+
+export interface IssueItem {
+	id: string;
+	issueId: string;
+	productId: string;
+	quantity: number;
+	unitPrice: string;
+}
+
+export interface IssueItemWithProduct {
+	item: IssueItem;
+	product: Product;
+}
+
+export interface ReportItem {
+	id: string;
+	reportId: string;
+	productId: string;
+	sold: number;
+	returned: number;
+	damaged: number;
+}
+
+export interface ReportItemWithProduct {
+	item: ReportItem;
+	product: Product;
+}
+
+export interface Deposit {
+	id: string;
+	reportId: string;
+	amount: string;
+	bankName: string;
+	referenceNo: string;
+	slipFileKey: string;
+	depositedAt: string;
+}
+
+export interface SalesReport {
+	id: string;
+	issueId: string;
+	salesUserId: string;
+	status: ReportStatus;
+	note: string | null;
+	submittedAt: string;
+}
+
+export interface ReportWithItems extends SalesReport {
+	items: ReportItemWithProduct[];
+	deposits: Deposit[];
+}
+
+export interface ReturnConfirmation {
+	id: string;
+	issueId: string;
+	confirmedBy: string;
+	confirmedAt: string;
+	note: string | null;
+}
+
+export interface ReturnConfirmationItem {
+	id: string;
+	confirmationId: string;
+	productId: string;
+	returned: number;
+	damaged: number;
+}
+
+export interface ReturnConfirmationItemWithProduct {
+	item: ReturnConfirmationItem;
+	product: Product;
+}
+
+export interface ReturnConfirmationWithItems extends ReturnConfirmation {
+	items: ReturnConfirmationItemWithProduct[];
+}
+
+export interface Verification {
+	id: string;
+	reportId: string;
+	accountantId: string;
+	decision: VerificationDecision;
+	expectedCash: string;
+	depositedCash: string;
+	cashVariance: string;
+	racksVariance: number;
+	note: string | null;
+	decidedAt: string;
+}
+
+export interface Reconciliation {
+	expected_sold: number;
+	declared_sold: number;
+	racks_variance: number;
+	expected_cash: string;
+	deposited_cash: string;
+	cash_variance: string;
+	returns_confirmed: boolean;
+}
+
+export interface IssueDetail {
+	issue: Issue;
+	salesperson: Salesperson;
+	items: IssueItemWithProduct[];
+	report: ReportWithItems | null;
+	return_confirmation: ReturnConfirmationWithItems | null;
+	verification: Verification | null;
+	reconciliation: Reconciliation;
+}
+
+export type ThreadEventType =
+	| "issued"
+	| "report_submitted"
+	| "deposit_added"
+	| "returns_confirmed"
+	| "verified"
+	| "flagged"
+	| "comment";
+
+export type EventPayload = Record<string, unknown>;
+
+export interface ThreadEvent {
+	id: string;
+	issueId: string;
+	actorId: string | null;
+	actorName?: string | null;
+	type: ThreadEventType;
+	payload: EventPayload;
+	createdAt: string;
+}
+
+export interface ThreadRow {
+	issue: Issue;
+	salesperson: Salesperson;
+	lastEvent: {
+		type: ThreadEventType;
+		payload: EventPayload;
+		createdAt: string;
+	} | null;
+	lastEventAt: string | null;
+	unreadCount: number | string;
+}
+
+export interface UploadedFile {
+	key: string;
+	contentType: string;
+	size: number;
+}
+
+export interface ReportItemInput {
+	product_id: string;
+	sold: number;
+	returned: number;
+	damaged: number;
+}
+
+export interface DepositInput {
+	amount: string;
+	bank_name: string;
+	reference_no: string;
+	slip_file_key: string;
+	deposited_at?: string;
+}
+
+export interface SubmitReportInput {
+	items: ReportItemInput[];
+	deposits: DepositInput[];
+}

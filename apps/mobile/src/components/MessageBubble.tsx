@@ -1,0 +1,5 @@
+import { StyleSheet, View } from "react-native";
+import { colors, radius, spacing } from "../constants/colors";
+import { Text } from "./Text";
+export function MessageBubble({ own, name, text, time, children }: { own?: boolean; name?: string; text?: string; time: string; children?: React.ReactNode }) { return <View style={[styles.wrap, own ? styles.own : styles.other]}>{!own && name ? <Text muted size={12}>{name}</Text> : null}<View style={[styles.bubble, own ? styles.ownBubble : styles.otherBubble]}>{text ? <Text>{text}</Text> : children}{<Text muted size={10} style={styles.time}>{time}</Text>}</View></View>; }
+const styles = StyleSheet.create({ wrap: { maxWidth: "88%", marginVertical: spacing.xs }, own: { alignSelf: "flex-end", alignItems: "flex-end" }, other: { alignSelf: "flex-start" }, bubble: { borderRadius: radius.md, padding: spacing.md, minWidth: 90 }, ownBubble: { backgroundColor: colors.mint }, otherBubble: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }, time: { alignSelf: "flex-end", marginTop: spacing.xs } });

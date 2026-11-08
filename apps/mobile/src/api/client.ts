@@ -1,27 +1,39 @@
-import { assertTenantConfig, tenantConfig } from "../config/tenant";
+import { Platform } from "react-native";
+
+import { appConfig } from "../../config/app";
 import { getApiBaseUrl, getApiHostDiagnostics } from "../config/runtime";
+import type {
+	Deposit,
+	DepositInput,
+	IssueDetail,
+	SessionData,
+	SubmitReportInput,
+	ThreadEvent,
+	ThreadRow,
+	UploadedFile,
+	Verification,
+} from "../types";
 import { authClient } from "./auth-client";
 import { mobileStorage } from "./storage";
-import { normalizePhoneNumber, isE164PhoneNumber } from "../utils/phone";
 
 type ApiEnvelope<T> = { success: true; data: T; message?: string };
 type ApiErrorEnvelope = {
 	success: false;
 	error?: { message?: string; code?: string; details?: unknown };
 };
-const REQUEST_TIMEOUT_MS = 15_000;
-const PENDING_PAYMENT_KEY = `${tenantConfig.slug}-pending-payment`;
+
+const REQUEST_TIMEOUT_MS = 20_000;
+const UPLOAD_TIMEOUT_MS = 45_000;
+const TOKEN_KEY = `${appConfig.slug}-api-session-token`;
 
 let accessToken: string | null = null;
-let pendingPhone: string | null = null;
-let pendingRegistration: { firstName: string; lastName: string } | null = null;
-let accountNotFoundForPhone: string | null = null;
-const TOKEN_KEY = `${tenantConfig.slug}-api-session-token`;
+let unauthorizedHandler: (() => void) | null = null;
 const tokenHydration = Promise.resolve(mobileStorage.getItem(TOKEN_KEY)).then(
 	(token) => {
 		accessToken = token;
 	},
 );
+const cookieHydration = tokenHydration;
 
 export class MobileApiError extends Error {
 	constructor(
@@ -35,9 +47,48 @@ export class MobileApiError extends Error {
 	}
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-	assertTenantConfig();
-	const headers = new Headers(init.headers);
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+	unauthorizedHandler = handler;
+}
+
+export function setMobileAccessToken(token: string | null) {
+	accessToken = token;
+	if (token) mobileStorage.setItem(TOKEN_KEY, token);
+	else mobileStorage.deleteItem(TOKEN_KEY);
+}
+
+export function getMobileAccessToken() {
+	return accessToken;
+}
+
+async function authHeaders() {
+	await cookieHydration;
+	const headers = new Headers();
+	if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+	try {
+		const cookie = await authClient.getCookie();
+		if (cookie) headers.set("Cookie", cookie);
+	} catch {
+		// Cookie support is optional when the bearer token is available.
+	}
+	return headers;
+}
+
+export async function getAuthHeaders() {
+	const headers = await authHeaders();
+	return Object.fromEntries(headers.entries()) as Record<string, string>;
+}
+
+async function request<T>(
+	path: string,
+	init: RequestInit = {},
+	timeoutMs = REQUEST_TIMEOUT_MS,
+): Promise<T> {
+	const headers = await authHeaders();
+	if (!(init.body instanceof FormData))
+		headers.set("Content-Type", "application/json");
+	headers.set("Accept", "application/json");
+
 	const controller = new AbortController();
 	let timeoutId: ReturnType<typeof setTimeout> | undefined;
 	const timeout = new Promise<never>((_, reject) => {
@@ -45,39 +96,23 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 			controller.abort();
 			reject(
 				new MobileApiError(
-					`CRM API request timed out after ${REQUEST_TIMEOUT_MS / 1000}s. Check that the device can reach ${getApiBaseUrl()}.`,
+					`ZOLA API request timed out after ${timeoutMs / 1000}s. Check that this device can reach ${getApiBaseUrl()}.`,
 					0,
 					"TIMEOUT",
 				),
 			);
-		}, REQUEST_TIMEOUT_MS);
+		}, timeoutMs);
 	});
-	// Build-time tenant identity is a routing/observability hint only. The
-	// backend independently resolves and verifies the authorized tenant.
-	headers.set("X-Nexa-Tenant-Id", tenantConfig.id);
-	headers.set("X-Nexa-Tenant-Slug", tenantConfig.slug);
-	if (!(init.body instanceof FormData))
-		headers.set("Content-Type", "application/json");
-	if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+
 	let url = "";
 	try {
-		const apiBaseUrl = getApiBaseUrl();
-		url = `${apiBaseUrl}/api/v1${path}`;
+		url = `${getApiBaseUrl()}/api/v1${path}`;
 		if (__DEV__) {
-			console.info("[Mobile API] runtime host", getApiHostDiagnostics());
-			console.info(
-				`[Mobile API] ${init.method ?? "GET"} ${url} tenant=${tenantConfig.slug}`,
-			);
+			console.info("[ZOLA API] runtime host", getApiHostDiagnostics());
+			console.info(`[ZOLA API] ${init.method ?? "GET"} ${url}`);
 		}
-		await Promise.race([tokenHydration, timeout]);
-		const cookie = await Promise.race([authClient.getCookie(), timeout]);
-		if (cookie) headers.set("Cookie", cookie);
 		const response = await Promise.race([
-			fetch(url, {
-				...init,
-				headers,
-				signal: controller.signal,
-			}),
+			fetch(url, { ...init, headers, signal: controller.signal }),
 			timeout,
 		]);
 		let body: ApiEnvelope<T> | ApiErrorEnvelope;
@@ -87,33 +122,34 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 				| ApiErrorEnvelope;
 		} catch {
 			throw new MobileApiError(
-				`CRM API returned an invalid response (${response.status})`,
+				`ZOLA API returned an invalid response (${response.status})`,
 				response.status,
 				"INVALID_RESPONSE",
 			);
 		}
 		if (!response.ok || body.success === false) {
 			const errObj = body.success === false ? body.error : undefined;
-			const msg = errObj?.message ?? `Request failed (${response.status})`;
+			const message =
+				errObj?.message ?? `Request failed (${response.status})`;
 			const code =
 				errObj?.code ??
 				(response.status >= 500 ? "SERVER_ERROR" : "CLIENT_ERROR");
 			const reqId =
-				((errObj?.details as Record<string, unknown> | undefined)?.requestId as
-					| string
-					| undefined) ??
+				((errObj?.details as Record<string, unknown> | undefined)
+					?.requestId as string | undefined) ??
 				response.headers.get("x-request-id") ??
 				undefined;
-			throw new MobileApiError(msg, response.status, code, reqId);
+			if (response.status === 401) unauthorizedHandler?.();
+			throw new MobileApiError(message, response.status, code, reqId);
 		}
 		return body.data;
 	} catch (error) {
 		if (error instanceof MobileApiError) throw error;
-		if (__DEV__) console.error(`[Mobile API] ${url}`, error);
+		if (__DEV__) console.error(`[ZOLA API] ${url}`, error);
 		throw new MobileApiError(
 			error instanceof Error
-				? `${error.message}. Check the derived Expo host or EXPO_PUBLIC_API_URL and ensure the back-end service is reachable from this device.`
-				: "CRM API is unreachable. Check the derived Expo host or EXPO_PUBLIC_API_URL.",
+				? `${error.message}. Check EXPO_PUBLIC_API_URL and make sure the API is reachable from this device.`
+				: "ZOLA API is unreachable. Check EXPO_PUBLIC_API_URL.",
 			0,
 			"NETWORK_ERROR",
 		);
@@ -122,297 +158,100 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 	}
 }
 
-export function setMobileAccessToken(token: string | null) {
-	accessToken = token;
-	void (token
-		? mobileStorage.setItem(TOKEN_KEY, token)
-		: mobileStorage.deleteItem(TOKEN_KEY));
+export function getSession() {
+	return request<SessionData>("/auth/me");
 }
 
-export function setPendingPhone(phone: string) {
-	pendingPhone = phone;
+export function logoutApi() {
+	return request<{ ok: boolean }>("/auth/logout", { method: "POST" });
 }
 
-export function setAccountNotFoundPhone(phone: string) {
-	pendingPhone = phone;
-	accountNotFoundForPhone = phone;
+export function listThreads(status?: string) {
+	const query = status ? `?${new URLSearchParams({ status }).toString()}` : "";
+	return request<ThreadRow[]>(`/threads${query}`);
 }
 
-export function consumeAccountNotFoundPhone() {
-	const phone = accountNotFoundForPhone;
-	accountNotFoundForPhone = null;
-	return phone;
-}
-
-export function clearPendingRegistration() {
-	pendingRegistration = null;
-}
-
-export function setPendingRegistration(profile: {
-	firstName: string;
-	lastName: string;
-}) {
-	pendingRegistration = profile;
-}
-
-export function getPendingPhone() {
-	return pendingPhone;
-}
-
-export async function checkPhoneExists(phone: string) {
-	const normalized = normalizePhoneNumber(phone);
-	if (!isE164PhoneNumber(normalized)) {
-		throw new Error(
-			"Enter your phone number in E.164 format, for example +251911234567.",
-		);
-	}
-	const result = await request<{ exists: boolean }>("/auth/otp/phone-exists", {
-		method: "POST",
-		body: JSON.stringify({ phone: normalized }),
-	});
-	return { phone: normalized, exists: result.exists };
-}
-
-export async function requestPhoneOtp(phone: string) {
-	const normalized = normalizePhoneNumber(phone);
-	if (!isE164PhoneNumber(normalized)) {
-		throw new Error(
-			"Enter your phone number in E.164 format, for example +251911234567.",
-		);
-	}
-	setPendingPhone(normalized);
-	return request<{ message: string }>("/auth/otp/request", {
-		method: "POST",
-		body: JSON.stringify({ phone: normalized }),
-	});
-}
-
-export async function verifyPhoneOtp(phone: string, code: string) {
-	const normalized = normalizePhoneNumber(phone);
-	if (!isE164PhoneNumber(normalized)) {
-		throw new Error(
-			"Enter your phone number in E.164 format, for example +251911234567.",
-		);
-	}
-	const result = await request<{
-		user: Record<string, unknown>;
-		sessionToken: string;
-		tenant?: Record<string, unknown>;
-	}>("/auth/otp/verify", {
-		method: "POST",
-		body: JSON.stringify({ phone: normalized, code, ...pendingRegistration }),
-	});
-	pendingRegistration = null;
-	const sessionToken = result.sessionToken;
-	setMobileAccessToken(sessionToken);
-	return result;
-}
-
-export function listAppointments(params?: Record<string, string>) {
-	const search = params ? `?${new URLSearchParams(params).toString()}` : "";
-	return request<Array<Record<string, unknown>>>(
-		`/mobile/appointments${search}`,
-	);
-}
-
-export function listDoctors() {
-	return request<{
-		items: Array<Record<string, unknown>>;
-		total: number;
-		page: number;
-		pageSize: number;
-	}>("/doctors");
-}
-
-export function getDoctor(id: string) {
-	return request<Record<string, unknown>>(`/doctors/${encodeURIComponent(id)}`);
-}
-
-export function createMobileAppointment(input: {
-	doctorId: string;
-	startAt: string;
-	endAt: string;
-	reason?: string;
-}) {
-	return request<{
-		id: string;
-		status: string;
-		startAt: string;
-		endAt: string;
-	}>("/mobile/appointments", { method: "POST", body: JSON.stringify(input) });
-}
-
-export function rescheduleMobileAppointment(
-	id: string,
-	input: { startAt: string; endAt: string },
+export function listThreadEvents(
+	issueId: string,
+	before?: string,
+	limit = 100,
 ) {
-	return request<{
-		id: string;
-		status: string;
-		startAt: string;
-		endAt: string;
-	}>(`/mobile/appointments/${encodeURIComponent(id)}`, {
-		method: "PATCH",
-		body: JSON.stringify(input),
+	const params = new URLSearchParams({ limit: String(limit) });
+	if (before) params.set("before", before);
+	return request<ThreadEvent[]>(
+		`/threads/${encodeURIComponent(issueId)}/events?${params.toString()}`,
+	);
+}
+
+export function postComment(issueId: string, text: string) {
+	return request<ThreadEvent>(
+		`/threads/${encodeURIComponent(issueId)}/comments`,
+		{ method: "POST", body: JSON.stringify({ text }) },
+	);
+}
+
+export function markThreadRead(issueId: string) {
+	return request<unknown>(`/threads/${encodeURIComponent(issueId)}/read`, {
+		method: "POST",
 	});
 }
 
-export function cancelMobileAppointment(
-	id: string,
-	reason = "Cancelled from mobile app",
+export function getIssue(issueId: string) {
+	return request<IssueDetail>(`/issues/${encodeURIComponent(issueId)}`);
+}
+
+export function submitReport(issueId: string, input: SubmitReportInput) {
+	return request<{ id: string }>(
+		`/issues/${encodeURIComponent(issueId)}/report`,
+		{ method: "POST", body: JSON.stringify(input) },
+	);
+}
+
+export function addDeposit(reportId: string, input: DepositInput) {
+	return request<Deposit>(
+		`/reports/${encodeURIComponent(reportId)}/deposits`,
+		{ method: "POST", body: JSON.stringify(input) },
+	);
+}
+
+export function verifyReport(
+	reportId: string,
+	decision: "approved" | "flagged",
+	note?: string,
 ) {
-	return request<{ id: string; status: string }>(
-		`/mobile/appointments/${encodeURIComponent(id)}/cancel`,
-		{ method: "POST", body: JSON.stringify({ reason }) },
-	);
-}
-
-export function listMobileServices() {
-	return request<Array<Record<string, unknown>>>("/mobile/services");
-}
-
-export function createVisitPayment(input: {
-	serviceId: string;
-	doctorId: string;
-	startAt: string;
-}) {
-	return request<{ checkout_url: string; tx_ref: string }>("/payments/visit", {
-		method: "POST",
-		body: JSON.stringify(input),
-	});
-}
-
-export function verifyPaymentStatus(txRef: string) {
-	return request<{ idempotent: boolean; status: string }>(
-		`/payments/${encodeURIComponent(txRef)}/status`,
-	);
-}
-
-export const pendingPayment = {
-	get: () => mobileStorage.getItemAsync(PENDING_PAYMENT_KEY),
-	set: (txRef: string) =>
-		mobileStorage.setItemAsync(PENDING_PAYMENT_KEY, txRef),
-	clear: () => mobileStorage.deleteItemAsync(PENDING_PAYMENT_KEY),
-};
-
-export function listCardProducts() {
-	return request<Array<Record<string, unknown>>>("/payments/cards");
-}
-
-export function listPurchasedCards() {
-	return request<Array<Record<string, unknown>>>("/payments/cards/me");
-}
-
-export function createCardPayment(cardId: string) {
-	return request<{ checkout_url: string; tx_ref: string }>("/payments/card", {
-		method: "POST",
-		body: JSON.stringify({ cardId }),
-	});
-}
-
-export function createBalancePayment(amount?: string) {
-	return request<{ checkout_url: string; tx_ref: string }>(
-		"/payments/balance",
+	return request<Verification>(
+		`/reports/${encodeURIComponent(reportId)}/verify`,
 		{
 			method: "POST",
-			body: JSON.stringify(amount ? { amount } : {}),
+			body: JSON.stringify({ decision, note: note?.trim() || undefined }),
 		},
 	);
 }
 
-export function getMyPaymentBalance() {
-	return request<Record<string, unknown>>("/payments/me/balance");
+export function getFileUrl(key: string) {
+	return `${getApiBaseUrl()}/api/v1/files/${encodeURIComponent(key)}`;
 }
 
-export function getPaymentConfig() {
-	return request<{
-		currency: string;
-		serviceChargeEtb: string;
-		holdMinutes: number;
-	}>("/payments/config");
-}
-
-/** Safe, bilingual user-facing text for a failed checkout or payment API call. */
-export function paymentErrorMessage(error: unknown, fallback: string): string {
-	let message = fallback;
-	let reqId: string | undefined;
-
-	if (error instanceof MobileApiError) {
-		reqId = error.requestId;
-		if (
-			error.code === "CHAPA_AUTH_FAILED" ||
-			error.code === "PAYMENT_INIT_FAILED"
-		) {
-			message =
-				"Unable to start checkout with payment service. / ኦንላይን ክፍያ መጀመር አልተቻለም። እባክዎ እንደገና ይሞክሩ።";
-		} else if (error.code === "TX_REF_REUSED") {
-			message =
-				"Payment reference was already processed. / የክፍያ ማጣቀሻው ቀደም ብሎ ተይዟል።";
-		} else if (error.code === "SLOT_UNAVAILABLE" || error.code === "CONFLICT") {
-			message =
-				"This slot or plan is no longer available. / ይህ ቀጠሮ ወይም ፕላን አይገኝም።";
-		} else if (error.code === "PAYMENTS_DISABLED") {
-			message =
-				"Online payments are currently disabled. / ኦንላይን ክፍያ በአሁኑ ጊዜ አልተቻለም።";
-		} else if (error.code === "EMAIL_REQUIRED") {
-			message =
-				"Add a valid email address in Profile → Edit profile to pay online. / ኦንላይን ለመክፈል በመገለጫዎ ውስጥ ትክክለኛ ኢሜይል ያክሉ።";
-		} else if (error.message && error.status < 500) {
-			message = error.message;
-		}
-	} else if (error instanceof Error && error.message) {
-		message = error.message;
-	}
-
-	if (reqId) {
-		return `${message}\n\n[Ref: ${reqId}]`;
-	}
-	return message;
-}
-
-export function listMyPayments(page = 1, pageSize = 20) {
-	return request<{
-		items: Array<Record<string, unknown>>;
-		total: number;
-		page: number;
-		pageSize: number;
-	}>(`/payments/me?page=${page}&pageSize=${pageSize}`);
-}
-
-export function listDentalHistory() {
-	return request<Array<Record<string, unknown>>>("/mobile/dental-history");
-}
-
-export function listMobileNotifications() {
-	return request<Array<Record<string, unknown>>>("/mobile/notifications");
-}
-
-export function markMobileNotificationRead(id: string) {
-	return request<{ marked: boolean }>(
-		`/mobile/notifications/${encodeURIComponent(id)}/read`,
-		{ method: "POST" },
-	);
-}
-
-export function updateMobileProfile(input: {
-	name?: string;
-	email?: string;
-	dateOfBirth?: string;
-	emergencyContactPhone?: string;
+export async function uploadSlip(input: {
+	uri: string;
+	name: string;
+	type: string;
 }) {
-	return request<{ user: Record<string, unknown> }>("/mobile/me", {
-		method: "PATCH",
-		body: JSON.stringify(input),
-	});
-}
-
-export function getMobileProfile() {
-	return request<{
-		user: Record<string, unknown>;
-		patient: Record<string, unknown> | null;
-	}>("/mobile/me");
-}
-
-export function listMobileBills() {
-	return request<Array<Record<string, unknown>>>("/mobile/bills");
+	const form = new FormData();
+	if (Platform.OS === "web") {
+		const response = await fetch(input.uri);
+		const blob = await response.blob();
+		form.append("file", blob, input.name);
+	} else {
+		form.append("file", {
+			uri: input.uri,
+			name: input.name,
+			type: input.type,
+		} as unknown as Blob);
+	}
+	return request<UploadedFile>(
+		"/files",
+		{ method: "POST", body: form },
+		UPLOAD_TIMEOUT_MS,
+	);
 }

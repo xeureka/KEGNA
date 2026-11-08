@@ -1,0 +1,7 @@
+import { StyleSheet, View } from "react-native";
+import type { ThreadEvent } from "../types";
+import { formatMoney, formatRacks } from "../utils/format";
+import { colors, spacing } from "../constants/colors";
+import { Text } from "./Text";
+export function EventCard({ event }: { event: ThreadEvent }) { const p = event.payload; const title = ({ issued: "Load issued", report_submitted: "Report submitted", deposit_added: "Deposit added", returns_confirmed: "Returns confirmed", verified: "Verified", flagged: "Flagged" } as Record<string, string>)[event.type] ?? "Activity"; return <View style={styles.card}><Text bold>{title}</Text>{event.type === "deposit_added" ? <Text>{formatMoney(String(p.amount ?? "0"))} · {String(p.bankName ?? "")}</Text> : event.type === "issued" ? <Text muted>Load-out items recorded</Text> : event.type === "flagged" ? <Text>{String(p.note ?? "Report was flagged")}</Text> : <Text muted>{event.type === "returns_confirmed" ? "Physical returns were confirmed" : event.type === "verified" ? "The report was approved" : `Racks: ${formatRacks(Number(p.sold ?? 0))}`}</Text>}</View>; }
+const styles = StyleSheet.create({ card: { gap: spacing.xs, backgroundColor: colors.linen, borderRadius: 10, padding: spacing.md, minWidth: 180 } });

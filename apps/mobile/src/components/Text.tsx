@@ -1,17 +1,30 @@
 import React from "react";
-import { Text as RNText } from "react-native";
-import { useTranslation } from "react-i18next";
+import { Text as NativeText, type TextProps as NativeTextProps } from "react-native";
 
-export const Text = ({
-	children,
+import { colors } from "../constants/colors";
+
+export function Text({
+	muted,
+	bold,
+	size = 14,
+	style,
 	...props
-}: React.ComponentProps<typeof RNText>) => {
-	const { t } = useTranslation();
-	const translated =
-		typeof children === "string"
-			? t(children, { defaultValue: children })
-			: children;
-	return <RNText {...props}>{translated}</RNText>;
-};
-
-export default Text;
+}: NativeTextProps & {
+	muted?: boolean;
+	bold?: boolean;
+	size?: number;
+}) {
+	return (
+		<NativeText
+			{...props}
+			style={[
+				{
+					color: muted ? colors.muted : colors.ink,
+					fontSize: size,
+					fontWeight: bold ? "600" : "400",
+				},
+				style,
+			]}
+		/>
+	);
+}

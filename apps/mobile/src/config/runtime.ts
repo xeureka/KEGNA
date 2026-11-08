@@ -1,5 +1,4 @@
 import Constants from "expo-constants";
-import { tenantConfig } from "../../config/tenant.config";
 
 function hostFromExpo() {
 	const hostUri =
@@ -20,16 +19,14 @@ function hostFromExpo() {
 }
 
 function hostFromWeb() {
-	// React Native can expose `window` without providing browser location.
-	// Never let diagnostics crash an API request on Android/iOS.
 	const location = typeof window !== "undefined" ? window.location : undefined;
 	return location?.hostname || null;
 }
 
 /**
- * Production/EAS and tunnel builds must provide EXPO_PUBLIC_API_URL.
- * In normal Metro development, Expo tells us which machine served the bundle;
- * the API is on that same machine, using the back-end service's port 3001.
+ * Production/EAS builds must provide EXPO_PUBLIC_API_URL. In normal Metro
+ * development Expo tells us which machine served the bundle; the API listens
+ * on that same machine on port 3001.
  */
 export function getApiBaseUrl() {
 	const explicit = process.env.EXPO_PUBLIC_API_URL?.trim();
@@ -38,14 +35,11 @@ export function getApiBaseUrl() {
 	if (__DEV__) {
 		const host = hostFromExpo() ?? hostFromWeb();
 		if (host) return `http://${host}:3001`;
-		// Better Auth is created during module loading. Keep development startup
-		// alive if Expo has not exposed its host yet; the request will surface a
-		// normal connectivity error instead of crashing the whole app.
 		return "http://localhost:3001";
 	}
 
 	throw new Error(
-		"CRM API URL is unavailable. Set EXPO_PUBLIC_API_URL for a production build or tunnel development.",
+		"ZOLA API URL is unavailable. Set EXPO_PUBLIC_API_URL for a production build or tunnel development.",
 	);
 }
 
@@ -63,8 +57,4 @@ export function getApiHostDiagnostics() {
 			}
 		})(),
 	};
-}
-
-export function getTenantRuntimeConfig() {
-	return { ...tenantConfig, apiBaseUrl: getApiBaseUrl() };
 }

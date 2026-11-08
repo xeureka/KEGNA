@@ -1,39 +1,81 @@
 import React from "react";
-import { Pressable, StyleProp, ViewStyle } from "react-native";
-import { Text } from "./Text";
-import { styles } from "../styles/commonStyles";
+import {
+	ActivityIndicator,
+	Pressable,
+	StyleSheet,
+	type ViewStyle,
+} from "react-native";
 
-export const Button = ({
+import { colors, radius, spacing } from "../constants/colors";
+import { Text } from "./Text";
+
+type Variant = "primary" | "secondary" | "danger" | "ghost";
+
+export function Button({
 	label,
 	onPress,
-	secondary = false,
-	compact = false,
-	busy = false,
+	busy,
+	disabled,
+	variant = "primary",
 	style,
 }: {
 	label: string;
 	onPress: () => void;
-	secondary?: boolean;
-	compact?: boolean;
 	busy?: boolean;
-	style?: StyleProp<ViewStyle>;
-}) => (
-	<Pressable
-		onPress={onPress}
-		disabled={busy}
-		style={({ pressed }) => [
-			styles.button,
-			secondary && styles.secondaryButton,
-			compact && styles.compactButton,
-			style,
-			pressed && styles.pressed,
-			busy && { opacity: 0.6 },
-		]}
-	>
-		<Text style={[styles.buttonText, secondary && styles.secondaryButtonText]}>
-			{busy ? `${label}…` : label}
-		</Text>
-	</Pressable>
-);
+	disabled?: boolean;
+	variant?: Variant;
+	style?: ViewStyle;
+}) {
+	const inactive = disabled || busy;
+	const background =
+		variant === "primary"
+			? colors.primary
+			: variant === "danger"
+				? colors.danger
+				: variant === "secondary"
+					? colors.mint
+					: "transparent";
+	const textColor =
+		variant === "primary" || variant === "danger"
+			? colors.onPrimary
+			: colors.primary;
+	return (
+		<Pressable
+			accessibilityRole="button"
+			disabled={inactive}
+			onPress={onPress}
+			style={({ pressed }) => [
+				styles.base,
+				{ backgroundColor: background },
+				variant === "ghost" ? styles.ghost : null,
+				inactive ? styles.inactive : null,
+				pressed && !inactive ? styles.pressed : null,
+				style,
+			]}
+		>
+			{busy ? (
+				<ActivityIndicator color={textColor} />
+			) : (
+				<Text bold size={15} style={{ color: textColor }}>
+					{label}
+				</Text>
+			)}
+		</Pressable>
+	);
+}
 
-export default Button;
+const styles = StyleSheet.create({
+	base: {
+		minHeight: 46,
+		borderRadius: radius.md,
+		alignItems: "center",
+		justifyContent: "center",
+		paddingHorizontal: spacing.lg,
+	},
+	ghost: {
+		borderWidth: 1,
+		borderColor: colors.border,
+	},
+	inactive: { opacity: 0.5 },
+	pressed: { opacity: 0.82 },
+});
