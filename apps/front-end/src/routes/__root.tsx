@@ -3,6 +3,7 @@ import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { Toaster } from "sonner";
 
+import { NotFoundPage } from "@/components/errors/not-found-page";
 import { RootError, RootPending } from "@/components/errors/route-feedback";
 import { queryClient } from "@/lib/query";
 
@@ -10,6 +11,7 @@ export const Route = createRootRoute({
 	component: RootComponent,
 	pendingComponent: RootPending,
 	errorComponent: RootError,
+	notFoundComponent: NotFoundPage,
 });
 
 // oxlint-disable-next-line react/only-export-components

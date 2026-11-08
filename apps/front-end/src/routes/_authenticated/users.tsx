@@ -1,12 +1,9 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
-import { UsersPage } from "@/features/staff/components/users-page";
-import { getSession } from "@/lib/auth";
+import { UsersPage } from "@/features/users/components/users-page";
+import { requireRoles } from "@/lib/auth";
 
 export const Route = createFileRoute("/_authenticated/users")({
-	beforeLoad: () => {
-		if (getSession()?.role.name !== "OWNER")
-			throw redirect({ to: "/dashboard", replace: true });
-	},
+	beforeLoad: () => requireRoles(["admin"]),
 	component: UsersPage,
 });

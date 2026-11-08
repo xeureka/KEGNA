@@ -1,4 +1,4 @@
-import { HeartPulse } from "lucide-react";
+import { Package } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils.ts";
 
@@ -73,7 +73,7 @@ export function Spinner({ label = "Loading…" }: { label?: string }) {
 				<div className="absolute inset-0 rounded-full border-4 border-primary-100" />
 				<div className="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-t-primary-600 border-r-primary-300" />
 				<div className="absolute inset-0 flex items-center justify-center">
-					<HeartPulse className="size-4 animate-pulse text-primary-600" />
+					<Package className="size-4 animate-pulse text-primary-600" />
 				</div>
 			</div>
 			{label ? (

@@ -1,291 +1,218 @@
-export interface Paginated<T> {
-	items: T[];
-	total: number;
-	page: number;
-	pageSize: number;
-}
+export type RoleName = "admin" | "storekeeper" | "sales" | "accountant";
 
 export interface SessionUser {
 	id: string;
 	name: string;
 	email: string;
-	isSuperAdmin?: boolean;
+	role: RoleName;
 }
 
 export interface SessionContext {
 	user: SessionUser;
-	tenant: {
-		id: string;
-		name: string;
-		slug: string;
-		logoUrl?: string | null;
-		brandColor?: string;
-	};
-	membership: { id: string; status: string };
-	role: { name: string };
+	role: RoleName;
 	permissions: string[];
 	token: string;
 }
 
-export interface TenantBranding {
-	name: string;
-	slug: string;
-	logoUrl: string | null;
-	brandColor: string;
-}
-
-export interface PlatformTenant {
+export interface Product {
 	id: string;
 	name: string;
-	slug: string;
-	status: string;
-	logoUrl: string | null;
-	brandColor: string;
-}
-
-export type RoleName =
-	| "OWNER"
-	| "ADMIN"
-	| "DOCTOR"
-	| "RECEPTIONIST"
-	| "ACCOUNTANT";
-export type MembershipStatus = "ACTIVE" | "INVITED" | "SUSPENDED" | "INACTIVE";
-
-export interface Patient {
-	id: string;
-	patientNumber: string;
-	firstName: string;
-	lastName: string;
-	dateOfBirth: string | null;
-	gender: string | null;
-	phone: string | null;
-	email: string | null;
-	address: string | null;
-	emergencyContactName: string | null;
-	emergencyContactPhone: string | null;
-	membershipTier: string | null;
-	createdAt: string;
-}
-
-export interface Doctor {
-	id: string;
-	userId: string;
-	licenseNumber: string;
-	specialization: string | null;
-	bio: string | null;
-	isAvailable: boolean;
-	userName: string;
-	userEmail: string;
-}
-
-export type AppointmentStatus =
-	| "SCHEDULED"
-	| "CONFIRMED"
-	| "CHECKED_IN"
-	| "IN_PROGRESS"
-	| "COMPLETED"
-	| "CANCELLED"
-	| "NO_SHOW";
-
-export interface Appointment {
-	id: string;
-	patientId: string;
-	doctorId: string;
-	startAt: string;
-	endAt: string;
-	status: AppointmentStatus;
-	reason: string | null;
-	notes: string | null;
-	cancelledAt: string | null;
-	cancelledReason: string | null;
-	patientName: string;
-	doctorName: string;
-}
-
-export type QueueEntry = Appointment;
-
-export interface MedicalRecord {
-	id: string;
-	patientId: string;
-	doctorId: string | null;
-	appointmentId: string | null;
-	chiefComplaint: string | null;
-	diagnosis: string | null;
-	treatment: string | null;
-	notes: string | null;
-	patientName: string;
-	doctorName: string | null;
-	createdAt: string;
-}
-
-export type BillStatus =
-	| "DRAFT"
-	| "PENDING"
-	| "PARTIALLY_PAID"
-	| "PAID"
-	| "CANCELLED"
-	| "VOID";
-export type PaymentMethod =
-	| "CASH"
-	| "CARD"
-	| "BANK_TRANSFER"
-	| "MOBILE_MONEY"
-	| "OTHER";
-
-export interface BillItem {
-	id: string;
-	description: string;
-	quantity: string;
-	unitPrice: string;
-	discountAmount: string;
-	taxAmount: string;
-	totalAmount: string;
-}
-
-export interface Bill {
-	id: string;
-	patientId: string;
-	appointmentId: string | null;
-	billNumber: string;
-	status: BillStatus;
-	subtotal: string;
-	discountAmount: string;
-	taxAmount: string;
-	totalAmount: string;
-	notes: string | null;
-	createdAt: string;
-	patientName: string;
-	amountPaid: string;
-}
-
-export type AuditAction = "CREATE" | "UPDATE" | "DELETE";
-
-export interface AuditLog {
-	id: string;
-	actorUserId: string | null;
-	action: AuditAction;
-	entityType: string;
-	entityId: string | null;
-	oldValues: unknown;
-	newValues: unknown;
-	ipAddress: string | null;
-	createdAt: string;
-}
-
-export type Member = {
-	id: string;
-	userId: string;
-	roleId: string;
-	roleName: RoleName;
-	status: MembershipStatus;
-	joinedAt: string | null;
-	userName: string;
-	userEmail: string;
-};
-
-export type DiscountType = "NONE" | "PERCENTAGE" | "FIXED";
-
-export interface Procedure {
-	id: string;
-	code: string | null;
-	name: string;
-	category: string | null;
-	defaultPrice: string;
-	defaultDurationMinutes: number | null;
-	discountType: DiscountType;
-	discountValue: string;
+	sku: string;
+	bottlesPerRack: number;
+	pricePerRack: string;
 	isActive: boolean;
 	createdAt: string;
+	updatedAt: string;
 }
 
-/** Legacy alias for `Procedure` kept so existing pages compile unchanged. */
-export type Service = Procedure;
-
-export type DentalChartStatus = "PLANNED" | "COMPLETED" | "CANCELLED";
-
-export interface DentalChartEntry {
+export interface User {
 	id: string;
-	patientId: string;
-	doctorId: string;
-	appointmentId: string | null;
-	toothNumber: number;
-	surface: string | null;
-	procedureId: string | null;
-	procedureName: string;
-	notes: string | null;
-	charge: string;
-	status: DentalChartStatus;
-	datePerformed: string | null;
+	name: string;
+	email: string;
+	role: RoleName;
+	banned: boolean;
 	createdAt: string;
 }
 
-export interface ScheduleDaySlot {
+export interface SalesUser {
 	id: string;
-	doctorId: string;
-	dayOfWeek: number;
-	startTime: string;
-	endTime: string;
-	isAvailable: boolean;
+	name: string;
+	email: string;
 }
 
-export interface DashboardQueueItem {
+export type IssueStatus =
+	| "open"
+	| "reported"
+	| "returns_confirmed"
+	| "verified"
+	| "flagged";
+
+export interface Issue {
 	id: string;
-	patientName: string;
-	doctorName: string;
-	startAt: string;
-	endAt: string;
-	status: AppointmentStatus;
+	issueNo: string;
+	salesUserId: string;
+	issuedBy: string;
+	status: IssueStatus;
+	note: string | null;
+	issuedAt: string;
+	closedAt: string | null;
 }
 
-export interface DashboardData {
-	date: string;
-	role: string | null;
-	outstandingBalance: number;
-	today: {
-		total: number;
-		checkedIn: number;
-		inProgress: number;
-		completed: number;
-		cancelled: number;
-		revenueCollected: number;
-		queue: DashboardQueueItem[];
-	};
-	upcoming: { items: DashboardQueueItem[]; total: number };
-	month: {
-		appointments: number;
-		newPatients: number;
-		billsIssued: number;
-		revenueCollected: number;
-	};
-	statusDistribution: Array<{ status: string; value: number }>;
+export interface IssueItem {
+	id: string;
+	issueId: string;
+	productId: string;
+	quantity: number;
+	unitPrice: string;
 }
 
-/** Legacy alias so the dashboard page compiles until migrated. */
-export type DashboardStats = DashboardData;
-
-export interface DailyReport {
-	date: string;
-	appointments: {
-		scheduled: number;
-		confirmed: number;
-		checkedIn: number;
-		inProgress: number;
-		completed: number;
-		cancelled: number;
-		noShow: number;
-		total: number;
-	};
-	patientsSeen: number;
-	billsIssued: number;
-	invoiced: number;
-	revenueCollected: number;
+export interface IssueListRow {
+	issue: Issue;
+	salesperson: { id: string; name: string; email: string };
 }
 
-export interface FinancialReport {
-	dateFrom: string;
-	dateTo: string;
-	bills: number;
-	invoiced: number;
-	collected: number;
-	outstanding: number;
+export interface IssueItemWithProduct {
+	item: IssueItem;
+	product: Product;
+}
+
+export type ReportStatus = "submitted" | "verified" | "flagged";
+
+export interface SalesReport {
+	id: string;
+	issueId: string;
+	salesUserId: string;
+	status: ReportStatus;
+	note: string | null;
+	submittedAt: string;
+}
+
+export interface ReportItem {
+	id: string;
+	reportId: string;
+	productId: string;
+	sold: number;
+	returned: number;
+	damaged: number;
+}
+
+export interface ReportItemWithProduct {
+	item: ReportItem;
+	product: Product;
+}
+
+export interface Deposit {
+	id: string;
+	reportId: string;
+	amount: string;
+	bankName: string;
+	referenceNo: string;
+	slipFileKey: string;
+	depositedAt: string;
+}
+
+export interface ReturnConfirmation {
+	id: string;
+	issueId: string;
+	confirmedBy: string;
+	confirmedAt: string;
+	note: string | null;
+}
+
+export interface ReturnConfirmationItem {
+	id: string;
+	confirmationId: string;
+	productId: string;
+	returned: number;
+	damaged: number;
+}
+
+export interface ReturnConfirmationItemWithProduct {
+	item: ReturnConfirmationItem;
+	product: Product;
+}
+
+export type VerificationDecision = "approved" | "flagged";
+
+export interface Verification {
+	id: string;
+	reportId: string;
+	accountantId: string;
+	decision: VerificationDecision;
+	expectedCash: string;
+	depositedCash: string;
+	cashVariance: string;
+	racksVariance: number;
+	note: string | null;
+	decidedAt: string;
+}
+
+export interface Reconciliation {
+	expected_sold: number;
+	declared_sold: number;
+	racks_variance: number;
+	expected_cash: string;
+	deposited_cash: string;
+	cash_variance: string;
+	returns_confirmed: boolean;
+}
+
+export interface IssueReport extends SalesReport {
+	items: ReportItemWithProduct[];
+	deposits: Deposit[];
+}
+
+export interface IssueReturnConfirmation extends ReturnConfirmation {
+	items: ReturnConfirmationItemWithProduct[];
+}
+
+export interface IssueDetail extends Issue {
+	salesperson: { id: string; name: string; email: string };
+	items: IssueItemWithProduct[];
+	report: IssueReport | null;
+	return_confirmation: IssueReturnConfirmation | null;
+	verification: Verification | null;
+	reconciliation: Reconciliation;
+}
+
+export type MovementType =
+	| "receive"
+	| "issue"
+	| "return"
+	| "damage"
+	| "adjustment";
+
+export interface StockMovement {
+	id: string;
+	productId: string;
+	type: MovementType;
+	warehouseDelta: number;
+	holderDelta: number;
+	holderUserId: string | null;
+	issueId: string | null;
+	batchNo: string | null;
+	expiryDate: string | null;
+	reference: string | null;
+	note: string | null;
+	createdBy: string;
+	createdAt: string;
+}
+
+export interface StockBalance {
+	product: Product;
+	warehouseBalance: number;
+	heldBySalespeople: number;
+}
+
+export interface DashboardBalanceRow {
+	productId: string;
+	warehouse: number;
+	held: number;
+}
+
+export interface DashboardSummary {
+	balances: DashboardBalanceRow[];
+	issuesByStatus: Array<{ status: IssueStatus; count: number | string }>;
+	flagged: number | string;
+	racksWithSalespeople: number | string;
 }

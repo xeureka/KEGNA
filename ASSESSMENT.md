@@ -142,3 +142,23 @@ These are blockers for the destructive portions of the requested downgrade. Phas
 ## 5. Phase 0 result
 
 `ASSESSMENT.md` is complete. Implementation is intentionally paused here because the schema reset and authentication/storage choices carry data-loss and product-behavior risk. After confirmation of the risks above—especially database preservation, login identifier, role strategy, storage, push scope, and product name—the next action can be Phase 1.
+
+## Phase 4 — Web app assessment
+
+| Path / item | What it does | Verdict |
+|---|---|---|
+| `apps/front-end/src/components/layout/AppShell.tsx` | Dashboard shell, sidebar, header, session display. | KEEP layout; MODIFY branding, navigation, role gates and mobile-only screen |
+| `apps/front-end/src/components/ui/*`, `src/hooks/use-sort.ts` | Buttons, fields, table, modal, pagination, cards, badges, sort helpers. | KEEP and reuse; no new palette, shadows or gradients |
+| `apps/front-end/src/lib/api.ts`, `lib/env.ts`, `lib/query.ts` | Envelope-aware API client, base URL, TanStack Query client. | KEEP; MODIFY copy and remove tenant assumptions |
+| `apps/front-end/src/lib/auth.ts`, `lib/types.ts` | Session cache, bearer token, permissions, tenant/membership types. | MODIFY to single-tenant inventory session (`user`, `role`, `permissions`, `token`); REMOVE tenant/membership/super-admin |
+| `apps/front-end/src/features/auth/components/login-page.tsx` | Dental login with tenant branding and fake reset dialog. | MODIFY to ZOLA email/password; reject sales/accountant with a mobile-app message |
+| `apps/front-end/src/routes/*` | File-based routes for patients, doctors, appointments, billing, payments, platform/tenant, tips, reports, audit. | KEEP router setup; REMOVE old routes; BUILD dashboard/users/products/stock/issues routes |
+| `apps/front-end/src/features/staff/*`, `features/audit-logs/*` | Old membership user management and audit page. | MODIFY users screen for inventory roles; REMOVE audit screen (no back-end audit endpoint) |
+| `apps/front-end/src/features/dashboard/components/dashboard-page.tsx` | Dental queue, finance and platform tenant dashboard. | REMOVE; BUILD inventory overview with balances, open issues and flagged count |
+| `apps/front-end/src/features/{patients,doctors,appointments,billing,payments,calendar,medical-records,reports,tips,super-admin}/*`, `components/appointments/*` | All old dental/CRM/tenant screens and forms. | REMOVE |
+| `apps/front-end/src/lib/calendar.ts`, `lib/status.ts`, `types/index.ts` | Old domain helpers, status maps and type re-exports. | MODIFY status maps to issue/movement tones; REMOVE calendar and old types |
+| `apps/front-end/src/components/layout/global-search.tsx` | Patient/appointment global search. | REMOVE |
+| `apps/front-end/index.html`, `src/styles/index.css` | App title, fonts, existing indigo theme tokens. | MODIFY title; KEEP theme tokens unchanged |
+| New admin screens | Users, products, overview. | BUILD |
+| New storekeeper screens | Receive stock, ledger, load-out, open issues, confirm returns, adjustments. | BUILD |
+| `apps/back-end/src/routes/v1/users.ts` | User listing is admin-only, leaving storekeepers unable to choose a salesperson for a load-out. | MODIFY: add `GET /users/sales` guarded by `issues.create` (minimal backend gap fix) |

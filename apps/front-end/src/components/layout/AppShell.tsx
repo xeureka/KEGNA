@@ -2,30 +2,24 @@ import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import {
 	Activity,
-	BarChart3,
-	CalendarDays,
-	FileText,
-	HeartPulse,
+	ArrowDownToLine,
+	BookOpen,
+	ClipboardList,
 	LogOut,
 	Menu,
-	Receipt,
-	ScrollText,
-	Stethoscope,
-	UserCog,
+	Package,
+	PackagePlus,
+	Settings2,
+	Smartphone,
 	Users,
-	Building2,
-	Lightbulb,
-	CreditCard,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
-import { logout, useSession } from "../../lib/auth.ts";
-import type { RoleName } from "../../lib/types.ts";
-import { initials } from "../../lib/utils.ts";
-import { GlobalSearch } from "./global-search.tsx";
-import { api } from "@/lib/api";
-import type { TenantBranding } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { isWebRole, logout, useSession } from "@/lib/auth";
+import type { RoleName } from "@/lib/types";
+import { initials, titleCase } from "@/lib/utils";
 
 interface NavItem {
 	to: string;
@@ -33,130 +27,41 @@ interface NavItem {
 	icon: LucideIcon;
 }
 
-const ALL_NAV: NavItem[] = [
-	{ to: "/dashboard", label: "Dashboard", icon: Activity },
-	{ to: "/patients", label: "Patients", icon: Users },
-	{ to: "/doctors", label: "Doctors", icon: Stethoscope },
-	{ to: "/appointments", label: "Appointments", icon: CalendarDays },
-	{ to: "/medical-records", label: "Medical Records", icon: FileText },
-	{ to: "/bills", label: "Bills", icon: Receipt },
-	{ to: "/payments", label: "Payments", icon: CreditCard },
-	{ to: "/reports", label: "Reports", icon: BarChart3 },
-	{ to: "/users", label: "Users", icon: UserCog },
-	{ to: "/audit-logs", label: "Audit Logs", icon: ScrollText },
-	{ to: "/tips", label: "Tips", icon: Lightbulb },
+const ADMIN_NAV: NavItem[] = [
+	{ to: "/dashboard", label: "Overview", icon: Activity },
+	{ to: "/products", label: "Products", icon: Package },
+	{ to: "/users", label: "Users", icon: Users },
+	{ to: "/issues", label: "Issues", icon: ClipboardList },
+	{ to: "/stock/ledger", label: "Stock Ledger", icon: BookOpen },
 ];
 
-const ADMIN_NAV: NavItem[] = [...ALL_NAV];
-
-const DOCTOR_NAV: NavItem[] = [
-	{ to: "/dashboard", label: "Dashboard", icon: Activity },
-	{ to: "/appointments", label: "Appointments", icon: CalendarDays },
-	{ to: "/calendar", label: "My Calendar", icon: CalendarDays },
-	{ to: "/medical-records", label: "Medical Records", icon: FileText },
-	{ to: "/doctor-profile", label: "My Profile", icon: Stethoscope },
+const STOREKEEPER_NAV: NavItem[] = [
+	{ to: "/dashboard", label: "Overview", icon: Activity },
+	{ to: "/stock/receive", label: "Receive Stock", icon: ArrowDownToLine },
+	{ to: "/issues/new", label: "Issue Load-out", icon: PackagePlus },
+	{ to: "/issues", label: "Issues", icon: ClipboardList },
+	{ to: "/stock/ledger", label: "Stock Ledger", icon: BookOpen },
+	{ to: "/stock/adjust", label: "Adjustments", icon: Settings2 },
 ];
 
-const RECEPTIONIST_NAV: NavItem[] = [
-	{ to: "/dashboard", label: "Dashboard", icon: Activity },
-	{ to: "/patients", label: "Patients", icon: Users },
-	{ to: "/doctors", label: "Doctors", icon: Stethoscope },
-	{ to: "/appointments", label: "Appointments", icon: CalendarDays },
-	{ to: "/bills", label: "Bills", icon: Receipt },
-	{ to: "/payments", label: "Payments", icon: CreditCard },
-	{ to: "/reports", label: "Reports", icon: BarChart3 },
-];
-
-const ACCOUNTANT_NAV: NavItem[] = [
-	...RECEPTIONIST_NAV,
-	{ to: "/reports", label: "Reports", icon: BarChart3 },
-];
-
-const SUPER_ADMIN_NAV: NavItem[] = [
-	{ to: "/platform-dashboard", label: "Platform Dashboard", icon: Activity },
-	{ to: "/platform-users", label: "Platform Users", icon: Users },
-	{ to: "/tenant-onboarding", label: "Tenant Onboarding", icon: Building2 },
-];
-
-function navFor(role: string): NavItem[] {
-	switch (role) {
-		case "OWNER":
-			return ALL_NAV;
-		case "ADMIN":
-			return ADMIN_NAV;
-		case "DOCTOR":
-			return DOCTOR_NAV;
-		case "RECEPTIONIST":
-			return RECEPTIONIST_NAV;
-		case "ACCOUNTANT":
-			return ACCOUNTANT_NAV;
-		default:
-			return RECEPTIONIST_NAV;
-	}
-}
-
-function roleLabel(role: string): string {
-	switch (role) {
-		case "OWNER":
-			return "Owner";
-		case "DOCTOR":
-			return "Doctor";
-		case "RECEPTIONIST":
-			return "Receptionist";
-		case "ACCOUNTANT":
-			return "Accountant";
-		default:
-			return role;
-	}
+function navFor(role: RoleName): NavItem[] {
+	return role === "admin" ? ADMIN_NAV : STOREKEEPER_NAV;
 }
 
 export function AppShell() {
 	const navigate = useNavigate();
 	const { data: session } = useSession();
 	const [menuOpen, setMenuOpen] = useState(false);
-	const [branding, setBranding] = useState<TenantBranding | null>(null);
 
 	const user = session?.user;
 
-	useEffect(() => {
-		const slug = session?.tenant?.slug;
-		if (!slug) return;
-		void api
-			.get<TenantBranding>("/auth/branding", { tenantSlug: slug })
-			.then((value) => {
-				setBranding(value);
-				for (const [level, percentage] of [
-					["50", 8],
-					["100", 14],
-					["200", 24],
-					["500", 78],
-					["600", 88],
-					["700", 100],
-					["800", 92],
-					["900", 84],
-				] as const) {
-					document.documentElement.style.setProperty(
-						`--color-primary-${level}`,
-						`color-mix(in srgb, ${value.brandColor} ${percentage}%, ${percentage > 50 ? "black" : "white"})`,
-					);
-				}
-				let favicon = document.querySelector<HTMLLinkElement>(
-					"link[data-nexa-tenant-favicon]",
-				);
-				if (!favicon) {
-					favicon = document.createElement("link");
-					favicon.rel = "icon";
-					favicon.setAttribute("data-nexa-tenant-favicon", "true");
-					document.head.appendChild(favicon);
-				}
-				favicon.href =
-					value.logoUrl ||
-					`data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='${encodeURIComponent(value.brandColor)}'/></svg>`;
-			})
-			.catch(() => undefined);
-	}, [session?.tenant?.slug]);
+	const handleSignOut = async () => {
+		await logout();
+		toast.success("Signed out");
+		navigate({ to: "/login", replace: true });
+	};
 
-	if (!user) {
+	if (!user || !session) {
 		return (
 			<div className="flex min-h-screen items-center justify-center bg-slate-50 px-6">
 				<div className="max-w-sm rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
@@ -177,34 +82,49 @@ export function AppShell() {
 		);
 	}
 
-	const role: RoleName = (session?.role?.name as RoleName) || "RECEPTIONIST";
+	if (!isWebRole(session.role)) {
+		return (
+			<div className="flex min-h-screen items-center justify-center bg-slate-50 px-6">
+				<div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-8 text-center">
+					<div className="mx-auto flex size-12 items-center justify-center rounded-full border border-slate-200 bg-slate-50">
+						<Smartphone className="size-6 text-primary-600" />
+					</div>
+					<h1 className="mt-5 text-lg font-semibold text-slate-900">
+						Use the ZOLA mobile app
+					</h1>
+					<p className="mt-2 text-sm leading-relaxed text-slate-500">
+						The web dashboard is for administrators and storekeepers. Signed in
+						as{" "}
+						<span className="font-medium text-slate-700">
+							{titleCase(session.role)}
+						</span>
+						, continue your work in the ZOLA mobile app.
+					</p>
+					<div className="mt-6 flex items-center justify-center gap-2">
+						<Button variant="secondary" onClick={handleSignOut}>
+							<LogOut className="size-4" /> Sign out
+						</Button>
+					</div>
+					<p className="mt-5 text-xs text-slate-400">{user.email}</p>
+				</div>
+			</div>
+		);
+	}
 
-	const nav = user.isSuperAdmin ? SUPER_ADMIN_NAV : navFor(role);
-
-	const handleSignOut = async () => {
-		await logout();
-		toast.success("Signed out");
-		navigate({ to: "/login", replace: true });
-	};
+	const nav = navFor(session.role);
 
 	const sidebar = (
 		<aside className="flex h-full w-60 flex-col border-r border-slate-200 bg-white">
 			<div className="flex items-center gap-2.5 border-b border-slate-200 px-5 py-4">
-				{branding?.logoUrl ? (
-					<img
-						src={branding.logoUrl}
-						alt=""
-						className="size-6 shrink-0 rounded object-contain"
-					/>
-				) : (
-					<HeartPulse className="size-5 shrink-0 text-primary-600" />
-				)}
+				<div className="flex size-8 items-center justify-center rounded-md border border-slate-200 bg-slate-50">
+					<Package className="size-4 text-primary-600" />
+				</div>
 				<div>
 					<p className="text-sm leading-tight font-semibold text-slate-900">
-						{branding?.name || session?.tenant?.name || "Nexa Dental"}
+						ZOLA
 					</p>
 					<p className="text-xs leading-tight text-slate-500">
-						Dental Clinic Management
+						Warehouse Inventory
 					</p>
 				</div>
 			</div>
@@ -236,7 +156,9 @@ export function AppShell() {
 						<p className="truncate text-sm font-medium text-slate-900">
 							{user.name}
 						</p>
-						<p className="truncate text-xs text-slate-500">{roleLabel(role)}</p>
+						<p className="truncate text-xs text-slate-500">
+							{titleCase(session.role)}
+						</p>
 					</div>
 					<button
 						type="button"
@@ -290,18 +212,13 @@ export function AppShell() {
 				>
 					<Menu className="size-4" />
 				</button>
-				<Link
-					to={user.isSuperAdmin ? "/platform-dashboard" : "/dashboard"}
-					className="flex items-center gap-2 lg:hidden"
-				>
-					<HeartPulse className="size-4 text-primary-600" />
-					<span className="text-sm font-semibold text-slate-900">
-						Nexa Dental
-					</span>
+				<Link to="/dashboard" className="flex items-center gap-2 lg:hidden">
+					<Package className="size-4 text-primary-600" />
+					<span className="text-sm font-semibold text-slate-900">ZOLA</span>
 				</Link>
-				<div className="mx-auto w-full max-w-md flex-1">
-					<GlobalSearch />
-				</div>
+				<p className="ml-auto hidden text-xs text-slate-400 sm:block">
+					{user.name}
+				</p>
 			</header>
 
 			<main className="mt-14 lg:ml-60">

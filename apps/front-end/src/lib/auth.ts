@@ -1,19 +1,27 @@
+import { redirect } from "@tanstack/react-router";
 import { useSyncExternalStore } from "react";
 
 import { api, ApiError } from "@/lib/api";
-import type { SessionContext } from "@/lib/types";
 import { queryClient } from "@/lib/query";
+import type { RoleName, SessionContext, SessionUser } from "@/lib/types";
 
 export class BackendUnavailableError extends Error {
 	constructor(
-		message = "The CRM backend is unavailable. Start the back-end service and try again.",
+		message = "The ZOLA backend is unavailable. Start the back-end service and try again.",
 	) {
 		super(message);
 		this.name = "BackendUnavailableError";
 	}
 }
 
-const STORAGE_KEY = "nexa.session.v1";
+const STORAGE_KEY = "zola.session.v1";
+const WEB_ROLES: RoleName[] = ["admin", "storekeeper"];
+const VALID_ROLES: RoleName[] = [
+	"admin",
+	"storekeeper",
+	"sales",
+	"accountant",
+];
 
 type Listener = () => void;
 
@@ -21,12 +29,24 @@ const listeners = new Set<Listener>();
 let cached: SessionContext | null = null;
 let refreshInFlight: Promise<SessionContext | null> | null = null;
 
+function normalizeRole(value: string | null | undefined): RoleName {
+	return VALID_ROLES.includes(value as RoleName)
+		? (value as RoleName)
+		: "sales";
+}
+
 function read(): SessionContext | null {
 	if (cached) return cached;
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
 		if (!raw) return null;
-		cached = JSON.parse(raw) as SessionContext;
+		const parsed = JSON.parse(raw) as SessionContext;
+		if (!parsed?.token || !parsed?.user?.id) return null;
+		cached = {
+			...parsed,
+			user: { ...parsed.user, role: normalizeRole(parsed.user.role) },
+			role: normalizeRole(parsed.role),
+		};
 	} catch {
 		cached = null;
 	}
@@ -34,16 +54,16 @@ function read(): SessionContext | null {
 }
 
 function write(session: SessionContext | null) {
-	const previousTenantId = cached?.tenant.id;
+	const previousUserId = cached?.user.id;
 	cached = session;
-	if (previousTenantId !== session?.tenant.id) queryClient.clear();
+	if (previousUserId !== session?.user.id) queryClient.clear();
 	try {
 		if (session) localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
 		else localStorage.removeItem(STORAGE_KEY);
 	} catch {
 		// storage unavailable — in-memory fallback only
 	}
-	listeners.forEach((l) => l());
+	listeners.forEach((listener) => listener());
 }
 
 export function subscribe(listener: () => void) {
@@ -59,8 +79,8 @@ export function getAccessToken(): string | null {
 	return read()?.token ?? null;
 }
 
-export function getTenantId(): string | null {
-	return read()?.tenant.id ?? null;
+export function getRole(): RoleName | null {
+	return read()?.role ?? null;
 }
 
 export function hasPermission(permission: string): boolean {
@@ -72,39 +92,56 @@ export function useSession(): { data: SessionContext | null } {
 	return { data: session };
 }
 
-interface LoginResponse {
-	user: SessionContext["user"];
+export function isWebRole(role: RoleName | null | undefined): boolean {
+	return role === "admin" || role === "storekeeper";
+}
+
+export function requireRoles(roles: RoleName[]): void {
+	const session = getSession();
+	if (!session || !roles.includes(session.role)) {
+		throw redirect({ to: "/dashboard", replace: true });
+	}
+}
+
+interface AuthResponse {
+	user: SessionUser & { role?: string | null };
 	sessionToken: string;
-	tenant?: SessionContext["tenant"];
-	membership?: SessionContext["membership"];
-	role?: SessionContext["role"];
 	permissions?: string[];
+}
+
+function toSession(data: AuthResponse, token: string): SessionContext {
+	const role = normalizeRole(data.user.role);
+	return {
+		user: {
+			id: data.user.id,
+			name: data.user.name,
+			email: data.user.email,
+			role,
+		},
+		role,
+		permissions: data.permissions ?? [],
+		token,
+	};
 }
 
 export async function login(
 	email: string,
 	password: string,
 ): Promise<SessionContext> {
-	const data = await api.post<LoginResponse>("/auth/login", {
+	const data = await api.post<AuthResponse>("/auth/login", {
 		email,
 		password,
 	});
+	const session = toSession(data, data.sessionToken);
 
-	const session: SessionContext = {
-		user: data.user,
-		tenant: data.tenant ?? { id: "", name: "", slug: "" },
-		membership: data.membership ?? { id: "", status: "ACTIVE" },
-		role: data.role ?? { name: "" },
-		permissions: data.permissions ?? [],
-		token: data.sessionToken,
-	};
+	if (!WEB_ROLES.includes(session.role)) {
+		throw new Error(
+			"This web dashboard is for administrators and storekeepers. Sales and accountants should use the ZOLA mobile app.",
+		);
+	}
 
 	write(session);
 	return session;
-}
-
-export function setSession(session: SessionContext) {
-	write(session);
 }
 
 export async function logout(): Promise<void> {
@@ -116,25 +153,15 @@ export async function logout(): Promise<void> {
 	write(null);
 }
 
-/**
- * Hydrates/validates the stored session against `/auth/me`. Returns the
- * session when valid, otherwise clears storage and returns null.
- */
 async function refreshSessionOnce(): Promise<SessionContext | null> {
 	const current = read();
 	if (!current?.token) return null;
 	try {
-		const data = await api.get<SessionContext>("/auth/me");
-		const session: SessionContext = { ...current, ...data };
-		// `/auth/me` is also used by the authenticated route guard. Do not notify
-		// every subscriber when the server returned the same session; that can
-		// cause dev-mode route remounts and repeated session requests.
+		const data = await api.get<AuthResponse>("/auth/me");
+		const session = toSession(data, data.sessionToken || current.token);
 		if (JSON.stringify(current) !== JSON.stringify(session)) write(session);
 		return session;
 	} catch (error) {
-		// A rejected network/API request must reach TanStack Router's error
-		// boundary. Swallowing it here leaves the authenticated route pending
-		// forever when the API is unavailable.
 		if (error instanceof ApiError && error.status === 401) {
 			write(null);
 			return null;
@@ -152,11 +179,6 @@ async function refreshSessionOnce(): Promise<SessionContext | null> {
 	}
 }
 
-/**
- * Route guards can run more than once during a dev navigation/HMR update.
- * Share one validation request so several route matches cannot stampede the
- * remote database with identical Better Auth session lookups.
- */
 export function refreshSession(): Promise<SessionContext | null> {
 	if (!refreshInFlight) {
 		refreshInFlight = refreshSessionOnce().finally(() => {

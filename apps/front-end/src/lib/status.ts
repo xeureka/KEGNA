@@ -23,40 +23,30 @@ export const badgeTones: Record<BadgeTone, { chip: string; dot: string }> = {
 	},
 };
 
-export const APPOINTMENT_STATUS_TONE: Record<string, BadgeTone> = {
-	SCHEDULED: "neutral",
-	CONFIRMED: "accent",
-	CHECKED_IN: "neutral",
-	IN_PROGRESS: "accent",
-	COMPLETED: "success",
-	CANCELLED: "danger",
-	NO_SHOW: "warning",
+export const ISSUE_STATUS_TONE: Record<string, BadgeTone> = {
+	open: "accent",
+	reported: "warning",
+	returns_confirmed: "accent",
+	verified: "success",
+	flagged: "danger",
 };
 
-export const BILL_STATUS_TONE: Record<string, BadgeTone> = {
-	DRAFT: "neutral",
-	PENDING: "warning",
-	PARTIALLY_PAID: "warning",
-	PAID: "success",
-	CANCELLED: "neutral",
-	REFUNDED: "neutral",
-	VOID: "neutral",
+export const MOVEMENT_TYPE_TONE: Record<string, BadgeTone> = {
+	receive: "success",
+	issue: "accent",
+	return: "neutral",
+	damage: "danger",
+	adjustment: "warning",
 };
 
-export const AUDIT_ACTION_TONE: Record<string, BadgeTone> = {
-	CREATE: "success",
-	UPDATE: "accent",
-	DELETE: "danger",
+export const VERIFICATION_TONE: Record<string, BadgeTone> = {
+	approved: "success",
+	flagged: "danger",
 };
 
-export const PAYMENT_METHOD_LABEL: Record<string, string> = {
-	CHAPA: "Chapa (mobile app)",
-	CASH: "Cash",
-	MOBILE_TRANSFER: "Mobile transfer",
-};
-
-export const PAYMENT_METHOD_TONE: Record<string, BadgeTone> = {
-	CHAPA: "accent",
-	CASH: "neutral",
-	MOBILE_TRANSFER: "accent",
+export const ROLE_TONE: Record<string, BadgeTone> = {
+	admin: "accent",
+	storekeeper: "neutral",
+	sales: "neutral",
+	accountant: "neutral",
 };
