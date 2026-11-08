@@ -5,6 +5,8 @@ import {
 	ClipboardList,
 	Landmark,
 	LockKeyhole,
+	Eye,
+	EyeOff,
 	Package,
 	ShieldCheck,
 } from "lucide-react";
@@ -51,6 +53,7 @@ export function LoginPage() {
 	const navigate = useNavigate();
 	const { data: session } = useSession();
 	const [submitting, setSubmitting] = useState(false);
+	const [showPassword, setShowPassword] = useState(false);
 
 	const {
 		register,
@@ -153,12 +156,10 @@ export function LoginPage() {
 							</Field>
 
 							<Field label="Password" error={errors.password?.message}>
-								<Input
-									type="password"
-									autoComplete="current-password"
-									placeholder="••••••••"
-									{...register("password")}
-								/>
+								<div className="relative">
+									<Input type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="••••••••" className="pr-10" {...register("password")} />
+									<button type="button" className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button>
+								</div>
 							</Field>
 
 							<Button type="submit" className="w-full" loading={submitting}>
