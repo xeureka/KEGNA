@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copy-button";
 import { Field, Input } from "@/components/ui/field";
 import { login, useSession } from "@/lib/auth";
 
@@ -40,6 +41,11 @@ const FEATURES = [
 	},
 ];
 
+const DEV_ACCOUNTS = [
+	{ label: "Admin", email: "admin@zola.local" },
+	{ label: "Storekeeper", email: "storekeeper@zola.local" },
+];
+
 export function LoginPage() {
 	const navigate = useNavigate();
 	const { data: session } = useSession();
@@ -70,7 +76,7 @@ export function LoginPage() {
 	};
 
 	return (
-		<div className="flex min-h-screen bg-white">
+		<div className="flex min-h-screen bg-slate-50">
 			<div className="hidden min-h-screen w-1/2 items-center justify-center border-r border-slate-200 px-12 lg:flex">
 				<div className="w-full max-w-md">
 					<div className="flex items-center gap-3">
@@ -78,7 +84,7 @@ export function LoginPage() {
 							<Package className="size-4 text-primary-600" />
 						</div>
 						<div>
-							<p className="text-sm font-semibold text-slate-900">ZOLA</p>
+							<p className="text-sm font-semibold text-slate-900">WAI</p>
 							<p className="text-xs text-slate-500">Warehouse Inventory</p>
 						</div>
 					</div>
@@ -87,7 +93,7 @@ export function LoginPage() {
 						Every rack accounted for, from delivery to deposit.
 					</h1>
 					<p className="mt-5 text-base leading-relaxed text-slate-600">
-						ZOLA gives the warehouse team one place to receive stock, issue
+						WAI gives the warehouse team one place to receive stock, issue
 						racks, confirm returns and reconcile sales reports against bank
 						deposits.
 					</p>
@@ -122,13 +128,13 @@ export function LoginPage() {
 						<div className="flex size-10 items-center justify-center rounded-md border border-slate-200 bg-white">
 							<Package className="size-5 text-primary-600" />
 						</div>
-						<p className="mt-3 text-base font-semibold text-slate-900">ZOLA</p>
+						<p className="mt-3 text-base font-semibold text-slate-900">WAI</p>
 						<p className="mt-0.5 text-sm text-slate-500">
 							Sign in to the warehouse dashboard
 						</p>
 					</div>
 
-					<div className="rounded-lg border border-slate-200 bg-white p-8">
+					<div className="rounded-2xl border border-slate-200 bg-white p-8">
 						<h2 className="text-xl font-semibold tracking-tight text-slate-900">
 							Welcome back
 						</h2>
@@ -159,9 +165,22 @@ export function LoginPage() {
 						</form>
 					</div>
 
+					<div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+						<div className="flex items-start justify-between gap-3">
+							<div>
+								<p className="text-sm font-semibold text-slate-900">Development access</p>
+								<p className="mt-1 text-xs leading-relaxed text-slate-500">Copy a seeded web email. The password remains private in the backend environment.</p>
+							</div>
+							<span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Local only</span>
+						</div>
+						<div className="mt-4 space-y-2">
+							{DEV_ACCOUNTS.map((account) => <div key={account.email} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2.5"><div className="min-w-0"><p className="text-xs font-medium text-slate-500">{account.label}</p><p className="truncate text-sm text-slate-900">{account.email}</p></div><CopyButton value={account.email} label={`${account.label} email`} /></div>)}
+						</div>
+					</div>
+
 					<p className="mt-6 flex items-start gap-2 text-xs leading-relaxed text-slate-400">
 						<LockKey className="mt-0.5 size-3.5 shrink-0" />
-						Sales and accountants use the ZOLA mobile app. Contact an
+						Sales and accountants use the WAI mobile app. Contact an
 						administrator if you need a password reset.
 					</p>
 				</div>

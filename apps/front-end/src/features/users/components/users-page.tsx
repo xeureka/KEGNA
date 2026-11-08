@@ -346,7 +346,7 @@ function CreateUserModal({
 			open={open}
 			onClose={onClose}
 			title="Create user"
-			subtitle="Provision a ZOLA account and assign its role."
+				subtitle="Provision a WAI account and assign its role."
 		>
 			<form
 				onSubmit={handleSubmit((values) => mutation.mutate(values))}

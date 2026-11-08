@@ -67,7 +67,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 	} catch (error) {
 		if (error instanceof DOMException && error.name === "AbortError") {
 			throw new ApiError(
-				`The API did not respond while loading ${path}. Check that the ZOLA back-end service is running.`,
+				`The API did not respond while loading ${path}. Check that the WAI back-end service is running.`,
 				"REQUEST_TIMEOUT",
 				504,
 			);

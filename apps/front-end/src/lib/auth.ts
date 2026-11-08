@@ -7,7 +7,7 @@ import type { RoleName, SessionContext, SessionUser } from "@/lib/types";
 
 export class BackendUnavailableError extends Error {
 	constructor(
-		message = "The ZOLA backend is unavailable. Start the back-end service and try again.",
+		message = "The WAI backend is unavailable. Start the back-end service and try again.",
 	) {
 		super(message);
 		this.name = "BackendUnavailableError";
@@ -136,7 +136,7 @@ export async function login(
 
 	if (!WEB_ROLES.includes(session.role)) {
 		throw new Error(
-			"This web dashboard is for administrators and storekeepers. Sales and accountants should use the ZOLA mobile app.",
+			"This web dashboard is for administrators and storekeepers. Sales and accountants should use the WAI mobile app.",
 		);
 	}
 

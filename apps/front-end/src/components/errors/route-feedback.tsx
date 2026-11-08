@@ -21,7 +21,7 @@ export function RootError({ error }: { error?: unknown }) {
 			</p>
 			<p className="text-base font-semibold text-slate-800">
 				{unavailable
-					? "The ZOLA backend is unavailable."
+					? "The WAI backend is unavailable."
 					: "The application hit an unexpected error."}
 			</p>
 			<p className="max-w-sm text-sm text-slate-500">{message}</p>
