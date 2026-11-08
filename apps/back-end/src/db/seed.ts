@@ -47,6 +47,13 @@ async function main() {
 		const received = await db.select({ id: stockMovements.id }).from(stockMovements).where(and(eq(stockMovements.productId, product.id), eq(stockMovements.type, "receive"))).limit(1);
 		if (!received[0]) await db.insert(stockMovements).values({ productId: product.id, type: "receive", warehouseDelta: 100, holderDelta: 0, batchNo: "OPENING", reference: "ZOLA opening balance", createdBy: storekeeperId });
 	}
+	let verifiedUsers = 0;
+	for (const person of people) {
+		const result = await auth.api.signInEmail({ body: { email: person.email, password: seedPassword } });
+		if (!result?.user || !result.token) throw new Error(`Seed sign-in verification failed for ${person.email}`);
+		verifiedUsers += 1;
+	}
+	console.log(`seed verified: ${verifiedUsers} users can sign in`);
 	console.log(JSON.stringify({ seeded: true, users: people.map((person) => person.email), products: productData.map((item) => item.sku), passwordSource: "SEED_PASSWORD" }));
 }
 

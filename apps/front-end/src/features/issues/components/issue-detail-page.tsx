@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
-import { AlertTriangle, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, Eye } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -39,6 +39,12 @@ export function IssueDetailPage() {
 	});
 	const queryClient = useQueryClient();
 	const [confirmOpen, setConfirmOpen] = useState(false);
+	const [slip, setSlip] = useState<{ key: string; url: string } | null>(null);
+	const [slipLoading, setSlipLoading] = useState<string | null>(null);
+	const viewSlip = async (key: string) => {
+		setSlipLoading(key);
+		try { const blob = await api.getBlob(`/files/${encodeURIComponent(key)}`); setSlip({ key, url: URL.createObjectURL(blob) }); } finally { setSlipLoading(null); }
+	};
 
 	const issueQuery = useQuery({
 		queryKey: ["issue", issueId],
@@ -53,6 +59,7 @@ export function IssueDetailPage() {
 
 	return (
 		<div className="space-y-5">
+			<Modal open={Boolean(slip)} onClose={() => { if (slip) URL.revokeObjectURL(slip.url); setSlip(null); }} title="Bank slip" size="lg">{slip ? <img src={slip.url} alt="Bank slip" className="max-h-[70vh] w-full object-contain" /> : null}</Modal>
 			<PageHeader
 				title={issue ? issue.issueNo : "Issue detail"}
 				subtitle={
@@ -310,6 +317,7 @@ export function IssueDetailPage() {
 																	value={deposit.slipFileKey}
 																	label="slip file key"
 																/>
+												<Button size="sm" variant="secondary" disabled={slipLoading === deposit.slipFileKey} onClick={() => void viewSlip(deposit.slipFileKey)}><Eye className="size-4" /> {slipLoading === deposit.slipFileKey ? "Loading" : "View slip"}</Button>
 															</div>
 														</Td>
 													</TableRow>

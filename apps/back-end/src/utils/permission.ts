@@ -18,6 +18,7 @@ export const permissions = {
 	verifyReport: "reports.verify",
 	viewReports: "reports.read",
 	postComments: "threads.comment",
+	viewAudit: "audit.read",
 } as const;
 
 export type Permission = (typeof permissions)[keyof typeof permissions];

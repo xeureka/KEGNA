@@ -90,6 +90,10 @@ await expect("thread read resets unread", `/threads/${issue1Id}/read`, sales.ses
 const readThreads = await json("/threads", sales.sessionToken);
 pass("thread unread count resets", Number(readThreads.body.data.find((row) => row.issue.id === issue1Id)?.unreadCount) === 0);
 await expect("comment posts", `/threads/${issue1Id}/comments`, sales.sessionToken, "POST", { text: "Smoke comment" }, 200);
+const auditLog = await json("/audit-logs?page=1&pageSize=10", seededAdmin.sessionToken);
+pass("admin can read audit log", auditLog.response.status === 200 && Array.isArray(auditLog.body?.data));
+await expect("sales cannot read audit log", "/audit-logs", sales.sessionToken, "GET", undefined, 403);
+await expect("accountant cannot read audit log", "/audit-logs", accountant.sessionToken, "GET", undefined, 403);
 const events = await json(`/threads/${issue1Id}/events`, sales.sessionToken);
 pass("thread events are oldest-first with actor names", events.response.status === 200 && events.body.data.at(-1)?.type === "comment" && events.body.data.some((event) => event.actorName));
 

@@ -30,7 +30,7 @@ function hostFromWeb() {
  */
 export function getApiBaseUrl() {
 	const explicit = process.env.EXPO_PUBLIC_API_URL?.trim();
-	if (explicit) return explicit.replace(/\/$/, "");
+	if (explicit) return normalizeApiOrigin(explicit);
 
 	if (__DEV__) {
 		const host = hostFromExpo() ?? hostFromWeb();
@@ -41,6 +41,11 @@ export function getApiBaseUrl() {
 	throw new Error(
 		"ZOLA API URL is unavailable. Set EXPO_PUBLIC_API_URL for a production build or tunnel development.",
 	);
+}
+
+/** The mobile clients use one origin and add `/api` at their endpoint boundary. */
+export function normalizeApiOrigin(value: string) {
+	return value.trim().replace(/\/+$/, "").replace(/\/api$/i, "");
 }
 
 export function getApiHostDiagnostics() {

@@ -31,8 +31,9 @@ cp apps/mobile/.env.example apps/mobile/.env
 
 The back-end requires `DATABASE_URL` and a random `BETTER_AUTH_SECRET` of at
 least 32 characters. Set `SEED_PASSWORD` for development users; do not commit
-real environment files or secrets. The mobile LAN URL should point to the
-computer's reachable address, for example `http://192.168.1.10:3001`.
+real environment files or secrets. The mobile LAN URL is the backend origin
+without `/api`, for example `http://192.168.1.10:3001`. Both mobile clients
+derive their `/api` endpoints from this single normalized origin.
 
 ## Run locally
 
@@ -97,3 +98,8 @@ Mobile checks:
 EXPO_OFFLINE=1 CI=1 pnpm --filter mobile exec expo export --platform android --output-dir /tmp/zola-export-check
 pnpm dlx expo-doctor
 ```
+
+If `expo-doctor` reports `Failed to parse JSON output from npx expo config`,
+run `pnpm exec expo config --json --full` directly. This is an Expo Doctor
+wrapper/tooling issue when the local environment cannot provide parseable JSON;
+it is not caused by the ZOLA app config.

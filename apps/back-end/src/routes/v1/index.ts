@@ -12,6 +12,7 @@ import threads from "./threads";
 import files from "./files";
 import dashboard from "./dashboard";
 import users from "./users";
+import audit from "./audit";
 
 const v1 = new OpenAPIHono<AppEnv>();
 const authRoute = new OpenAPIHono<AppEnv>();
@@ -24,5 +25,5 @@ authRoute.openapi(me, async (c) => { const session = await auth.api.getSession({
 const logout = createRoute({ method: "post", path: "/logout", tags: ["Users"], summary: "Sign out", responses: { 200: { description: "Signed out", content: { "application/json": { schema: z.any() } } } } });
 authRoute.openapi(logout, async (c) => { await auth.api.signOut({ headers: c.req.raw.headers }); return c.json({ success: true as const, data: { ok: true as const } }); });
 v1.route("/auth", authRoute);
-v1.route("/users", users); v1.route("/products", products); v1.route("/stock", stock); v1.route("/issues", issues); v1.route("/", reports); v1.route("/", returns); v1.route("/", verification); v1.route("/threads", threads); v1.route("/files", files); v1.route("/dashboard", dashboard);
+v1.route("/users", users); v1.route("/products", products); v1.route("/stock", stock); v1.route("/issues", issues); v1.route("/", reports); v1.route("/", returns); v1.route("/", verification); v1.route("/threads", threads); v1.route("/files", files); v1.route("/dashboard", dashboard); v1.route("/audit-logs", audit);
 export default v1;

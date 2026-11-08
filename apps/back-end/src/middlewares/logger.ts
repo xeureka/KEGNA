@@ -49,15 +49,17 @@ export const loggingMiddleware = structuredLogger({
 	},
 
 	onError: (errorLogger, error, c, elapsedMs) => {
-		errorLogger.error(
-			{
-				err: error,
-				method: c.req.method,
-				path: c.req.path,
-				durationMs: Number(elapsedMs.toFixed(2)),
-				client: c.req.header("user-agent")?.includes("Expo") ? "mobile" : "web",
-			},
-			"request failed",
-		);
+		const authError = error as Error & { statusCode?: number; body?: { code?: string } };
+		const log = {
+			method: c.req.method,
+			path: c.req.path,
+			durationMs: Number(elapsedMs.toFixed(2)),
+			client: c.req.header("user-agent")?.includes("Expo") ? "mobile" : "web",
+		};
+		if (authError.name === "APIError" || authError.statusCode === 401 || authError.body?.code === "INVALID_EMAIL_OR_PASSWORD") {
+			errorLogger.warn(log, "authentication request failed");
+			return;
+		}
+		errorLogger.error({ ...log, err: error }, "request failed");
 	},
 });

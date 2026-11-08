@@ -11,6 +11,7 @@ import {
 	PackagePlus,
 	Settings2,
 	Smartphone,
+	ScrollText,
 	Users,
 } from "lucide-react";
 import { useState } from "react";
@@ -33,6 +34,7 @@ const ADMIN_NAV: NavItem[] = [
 	{ to: "/users", label: "Users", icon: Users },
 	{ to: "/issues", label: "Issues", icon: ClipboardList },
 	{ to: "/stock/ledger", label: "Stock Ledger", icon: BookOpen },
+	{ to: "/audit", label: "Audit log", icon: ScrollText },
 ];
 
 const STOREKEEPER_NAV: NavItem[] = [

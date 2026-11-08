@@ -7,6 +7,11 @@ import { errorResponse } from "@/utils/api-response";
 import { env } from "@/lib/env";
 
 export const errorHandler = (error: Error, c: Context) => {
+	const authError = error as Error & { statusCode?: number; body?: { code?: string } };
+	if (authError.name === "APIError" || authError.statusCode === 401 || authError.body?.code === "INVALID_EMAIL_OR_PASSWORD") {
+		c.var?.logger?.warn({ statusCode: 401, requestId: c.var?.requestId }, "authentication failed");
+		return errorResponse(c, { message: "Invalid credentials", status: 401, code: ErrorCode.UNAUTHORIZED });
+	}
 	if (error instanceof AppError) {
 		c.var?.logger?.warn(
 			{

@@ -141,4 +141,11 @@ export const api = {
 		form.append("file", file);
 		return request<T>(path, { method: "POST", body: form });
 	},
+	getBlob: async (path: string) => {
+		const token = getAccessToken();
+		const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+		const response = await fetch(`${API_BASE_URL}${apiPath(path)}`, { headers, credentials: "include" });
+		if (!response.ok) throw new ApiError("Unable to load file", "FILE_ERROR", response.status);
+		return response.blob();
+	},
 };
