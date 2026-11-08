@@ -1,4 +1,8 @@
-export type RoleName = "admin" | "storekeeper" | "sales" | "accountant";
+export type RoleName = "admin" | "storekeeper" | "sales" | "accountant" | "warehouse_manager" | "finance";
+
+export function normalizeRole(role: RoleName): RoleName {
+	return role === "warehouse_manager" ? "storekeeper" : role === "finance" ? "accountant" : role;
+}
 
 export interface SessionUser {
 	id: string;
@@ -82,7 +86,7 @@ export interface Deposit {
 	amount: string;
 	bankName: string;
 	referenceNo: string;
-	slipFileKey: string;
+	slipFileKey: string | null;
 	depositedAt: string;
 }
 
@@ -197,6 +201,21 @@ export interface UploadedFile {
 	size: number;
 }
 
+export interface PersonalStock {
+	items: { beverage: Product; assigned: number; sold: number; left: number; price: string; left_value: string }[];
+	totals: { racks_left: number; est_value: string; sold_value: string };
+}
+
+export interface BeverageReport {
+	report: { id: string; status: "pending" | "successful" | "declined"; amount: string; bankReference: string; receiptFileKey: string | null; declineReason: string | null; submittedAt: string };
+	assignment: Issue;
+	sales: Salesperson;
+	lines: { beverage: Product; racksSold: number; unitPrice: string }[];
+	receipt: { key: string; reference: string } | null;
+}
+
+export interface FinancePayment extends BeverageReport {}
+
 export interface SalesSummary {
 	pending: number;
 	flagged: number;
@@ -238,7 +257,7 @@ export interface DepositInput {
 	amount: string;
 	bank_name: string;
 	reference_no: string;
-	slip_file_key: string;
+	slip_file_key?: string;
 	deposited_at?: string;
 }
 

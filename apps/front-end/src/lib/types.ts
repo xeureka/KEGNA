@@ -1,4 +1,4 @@
-export type RoleName = "admin" | "storekeeper" | "sales" | "accountant";
+export type RoleName = "admin" | "storekeeper" | "sales" | "accountant" | "warehouse_manager" | "finance";
 
 export interface SessionUser {
 	id: string;

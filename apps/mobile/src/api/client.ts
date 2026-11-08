@@ -13,6 +13,8 @@ import type {
 	AccountantSummary,
 	ReportListRow,
 	SalesSummary,
+	PersonalStock,
+	BeverageReport,
 } from "../types";
 import { mobileStorage } from "./storage";
 
@@ -72,6 +74,7 @@ async function authHeaders() {
 
 export async function getAuthHeaders() {
 	const headers = await authHeaders();
+	new Headers(init.headers).forEach((value, key) => headers.set(key, value));
 	return Object.fromEntries(headers.entries()) as Record<string, string>;
 }
 
@@ -212,6 +215,15 @@ export function listReports(filters: { status?: string; from?: string; to?: stri
 	const suffix = params.toString() ? `?${params.toString()}` : "";
 	return request<ReportListRow[]>(`/reports${suffix}`);
 }
+
+export function getMyStock() { return request<PersonalStock>("/me/stock"); }
+export function getMyReports(status?: string, cursor?: string) { const params = new URLSearchParams(); if (status) params.set("status", status); if (cursor) params.set("cursor", cursor); const suffix = params.toString() ? `?${params}` : ""; return request<{ items: BeverageReport[]; nextCursor: string | null }>(`/me/reports${suffix}`); }
+export function getMyReport(id: string) { return request<BeverageReport>(`/me/reports/${encodeURIComponent(id)}`); }
+export function submitMyReport(input: { assignment_id: string; lines: { product_id: string; racks_sold: number }[]; bank_reference: string; receipt_file_key?: string; bank_name?: string }, idempotencyKey: string) { const form = new FormData(); form.append("assignment_id", input.assignment_id); form.append("lines", JSON.stringify(input.lines)); form.append("bank_reference", input.bank_reference); if (input.receipt_file_key) form.append("receipt_file_key", input.receipt_file_key); if (input.bank_name) form.append("bank_name", input.bank_name); return request<BeverageReport>("/me/reports", { method: "POST", body: form, headers: { "Idempotency-Key": idempotencyKey } }); }
+export function getFinancePayments(status?: string) { const suffix = status ? `?status=${encodeURIComponent(status)}` : ""; return request<{ items: FinancePayment[]; counts: { pending: number; successful: number; declined: number } }>(`/finance/payments${suffix}`); }
+export function approveFinancePayment(id: string) { return request<{ reportId: string; status: string }>(`/finance/payments/${encodeURIComponent(id)}/approve`, { method: "POST" }); }
+export function declineFinancePayment(id: string, reason: string) { return request<{ reportId: string; status: string }>(`/finance/payments/${encodeURIComponent(id)}/decline`, { method: "POST", body: JSON.stringify({ reason }) }); }
+export function getFinanceOverview(date?: string) { return request<{ confirmed_revenue: string; pending_amount: string; declined_amount: string; stock_per_beverage: { beverage: Product; warehouse_racks: number; racks_out_with_reps: number }[]; revenue_per_rep: { salesId: string; name: string; amount: string }[] }>(`/finance/overview${date ? `?date=${date}` : ""}`); }
 
 export function submitReport(issueId: string, input: SubmitReportInput) {
 	return request<{ id: string }>(

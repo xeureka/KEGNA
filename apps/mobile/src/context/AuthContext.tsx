@@ -14,7 +14,11 @@ import {
 	setMobileAccessToken,
 	setUnauthorizedHandler,
 } from "../api/client";
-import type { SessionData } from "../types";
+import { normalizeRole, type SessionData } from "../types";
+
+function normalizeSession(next: SessionData): SessionData {
+	return { ...next, user: { ...next.user, role: normalizeRole(next.user.role) } };
+}
 
 type AuthStatus = "loading" | "signedOut" | "signedIn";
 
@@ -49,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 				const next = await getSession();
 				if (cancelled) return;
 				setMobileAccessToken(next.sessionToken);
-				setSession(next);
+				setSession(normalizeSession(next));
 				setStatus("signedIn");
 			} catch {
 				if (!cancelled) clearSession();
@@ -72,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		if (token) setMobileAccessToken(token);
 		const next = await getSession();
 		setMobileAccessToken(next.sessionToken);
-		setSession(next);
+		setSession(normalizeSession(next));
 		setStatus("signedIn");
 		return next;
 	}, []);

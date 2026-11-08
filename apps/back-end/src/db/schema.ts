@@ -48,14 +48,14 @@ export const stockMovements = pgTable("stock_movements", {
 	id: uuid("id").defaultRandom().primaryKey(), productId: uuid("product_id").notNull().references(() => products.id), type: stockMovementType("type").notNull(), warehouseDelta: integer("warehouse_delta").notNull(), holderDelta: integer("holder_delta").default(0).notNull(), holderUserId: text("holder_user_id").references(() => users.id), issueId: uuid("issue_id").references(() => issues.id), batchNo: text("batch_no"), expiryDate: date("expiry_date"), reference: text("reference"), note: text("note"), createdBy: text("created_by").notNull().references(() => users.id), createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("stock_movements_product_id_idx").on(table.productId), index("stock_movements_holder_user_id_idx").on(table.holderUserId)]);
 export const salesReports = pgTable("sales_reports", {
-	id: uuid("id").defaultRandom().primaryKey(), issueId: uuid("issue_id").notNull().unique().references(() => issues.id), salesUserId: text("sales_user_id").notNull().references(() => users.id), status: reportStatus("status").default("submitted").notNull(), note: text("note"), submittedAt: timestamp("submitted_at", { withTimezone: true }).defaultNow().notNull(),
+	id: uuid("id").defaultRandom().primaryKey(), issueId: uuid("issue_id").notNull().references(() => issues.id), salesUserId: text("sales_user_id").notNull().references(() => users.id), status: reportStatus("status").default("submitted").notNull(), note: text("note"), idempotencyKey: text("idempotency_key"), submittedAt: timestamp("submitted_at", { withTimezone: true }).defaultNow().notNull(),
 });
 export const reportItems = pgTable("report_items", {
 	id: uuid("id").defaultRandom().primaryKey(), reportId: uuid("report_id").notNull().references(() => salesReports.id, { onDelete: "cascade" }), productId: uuid("product_id").notNull().references(() => products.id), sold: integer("sold").notNull(), returned: integer("returned").notNull(), damaged: integer("damaged").notNull(),
 });
 export const deposits = pgTable("deposits", {
-	id: uuid("id").defaultRandom().primaryKey(), reportId: uuid("report_id").notNull().references(() => salesReports.id, { onDelete: "cascade" }), amount: numeric("amount", { precision: 12, scale: 2 }).notNull(), bankName: text("bank_name").notNull(), referenceNo: text("reference_no").notNull(), slipFileKey: text("slip_file_key").notNull(), depositedAt: timestamp("deposited_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [index("deposits_report_id_idx").on(table.reportId)]);
+	id: uuid("id").defaultRandom().primaryKey(), reportId: uuid("report_id").notNull().references(() => salesReports.id, { onDelete: "cascade" }), amount: numeric("amount", { precision: 12, scale: 2 }).notNull(), bankName: text("bank_name").notNull(), referenceNo: text("reference_no").notNull(), slipFileKey: text("slip_file_key"), depositedAt: timestamp("deposited_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("deposits_report_id_idx").on(table.reportId), unique("deposits_reference_no_unique").on(table.referenceNo)]);
 export const returnConfirmations = pgTable("return_confirmations", {
 	id: uuid("id").defaultRandom().primaryKey(), issueId: uuid("issue_id").notNull().unique().references(() => issues.id), confirmedBy: text("confirmed_by").notNull().references(() => users.id), confirmedAt: timestamp("confirmed_at", { withTimezone: true }).defaultNow().notNull(), note: text("note"),
 });
@@ -80,4 +80,4 @@ export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Product = typeof products.$inferSelect;
 export type Issue = typeof issues.$inferSelect;
-export type RoleName = "admin" | "storekeeper" | "sales" | "accountant";
+export type RoleName = "admin" | "storekeeper" | "sales" | "accountant" | "warehouse_manager" | "finance";

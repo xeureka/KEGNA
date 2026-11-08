@@ -7,7 +7,7 @@ import { users } from "@/db/schema";
 import { writeAudit } from "@/repositories/audit.repository";
 import type { RoleName } from "@/db/schema";
 
-const roles = new Set<RoleName>(["admin", "storekeeper", "sales", "accountant"]);
+const roles = new Set<RoleName>(["admin", "storekeeper", "sales", "accountant", "warehouse_manager", "finance"]);
 function validateRole(role: string): asserts role is RoleName { if (!roles.has(role as RoleName)) throw new AppError("Invalid role", 400, ErrorCode.VALIDATION_ERROR); }
 export async function listUsers() { return db.select({ id: users.id, name: users.name, email: users.email, role: users.role, banned: users.banned, createdAt: users.createdAt }).from(users).orderBy(asc(users.name)); }
 export async function listSalesUsers() { return db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(and(eq(users.role, "sales"), eq(users.banned, false))).orderBy(asc(users.name)); }

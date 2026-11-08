@@ -47,20 +47,27 @@ export const errorHandler = (error: Error, c: Context) => {
 	}
 
 	const requestId = c.var?.requestId;
-	const databaseError = (error as any)?.cause;
-	console.error(
-		"Unhandled error in errorHandler:",
-		error,
-		databaseError?.detail ?? databaseError,
-	);
+	const databaseError = (error as any)?.cause ?? error;
+	const queryError = error as Error & { query?: string; params?: unknown[] };
+	const databaseDiagnostics = {
+		message: error.message,
+		causeMessage: databaseError?.message,
+		code: databaseError?.code,
+		detail: databaseError?.detail,
+		table: databaseError?.table,
+		column: databaseError?.column,
+		position: databaseError?.position,
+		query: queryError.query ?? (error as any)?.query,
+		params: queryError.params ?? (error as any)?.params,
+		requestId,
+	};
+	console.error("Database request failure:", databaseDiagnostics);
 	c.var?.logger?.error(
 		{
-			err: error,
-			dbCode: databaseError?.code,
-			dbDetail: databaseError?.detail,
+			err: databaseDiagnostics,
 			requestId,
 		},
-		"unhandled application error",
+		"database request failure",
 	);
 
 	// Database failures carry SQL text, bound parameters and internal ids in

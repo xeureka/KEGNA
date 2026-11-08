@@ -15,12 +15,14 @@ export class BackendUnavailableError extends Error {
 }
 
 const STORAGE_KEY = "zola.session.v1";
-const WEB_ROLES: RoleName[] = ["admin", "storekeeper"];
+const WEB_ROLES: RoleName[] = ["admin", "storekeeper", "warehouse_manager"];
 const VALID_ROLES: RoleName[] = [
 	"admin",
 	"storekeeper",
 	"sales",
 	"accountant",
+	"warehouse_manager",
+	"finance",
 ];
 
 type Listener = () => void;
@@ -93,7 +95,7 @@ export function useSession(): { data: SessionContext | null } {
 }
 
 export function isWebRole(role: RoleName | null | undefined): boolean {
-	return role === "admin" || role === "storekeeper";
+	return role === "admin" || role === "storekeeper" || role === "warehouse_manager";
 }
 
 export function requireRoles(roles: RoleName[]): void {

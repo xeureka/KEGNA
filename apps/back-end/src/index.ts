@@ -1,9 +1,7 @@
 import { serve } from "@hono/node-server";
 import app from "./app";
 import "./lib/env";
-import { checkDatabaseConnection } from "./db/health";
-import { db } from "./db";
-import { sql } from "drizzle-orm";
+import { checkDatabaseConnection, checkInventorySchema } from "./db/health";
 import { env } from "./lib/env";
 
 const port = env.PORT;
@@ -27,6 +25,9 @@ process.on("unhandledRejection", (reason) => {
 });
 
 async function main() {
+	await checkDatabaseConnection();
+	await checkInventorySchema();
+	console.log("Database connection and inventory schema verified");
 	const server = serve(
 		{
 			fetch: app.fetch,
@@ -56,20 +57,6 @@ async function main() {
 		}
 		logFatalError("Server error:", err);
 	});
-
-	// Listen immediately so the frontend gets a real API response while the
-	// database connection warms up.
-	void checkDatabaseConnection()
-		.then(async () => {
-			console.log("Database connection established");
-			await db.execute(sql`SELECT 1`);
-		})
-		.catch((error) => {
-			console.error(
-				"Database is unavailable; API will remain online and retry on restart:",
-				error,
-			);
-		});
 
 	process.on("SIGTERM", () => {
 		server.close(() => process.exit(0));

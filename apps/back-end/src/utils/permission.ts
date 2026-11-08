@@ -19,14 +19,21 @@ export const permissions = {
 	viewReports: "reports.read",
 	postComments: "threads.comment",
 	viewAudit: "audit.read",
+	viewOwnStock: "stock.read.own",
+	createOwnReport: "reports.create.own",
+	manageAssignments: "assignments.manage",
+	viewFinance: "finance.read",
+	decidePayments: "payments.decide",
 } as const;
 
 export type Permission = (typeof permissions)[keyof typeof permissions];
 export const permissionMap: Record<RoleName, readonly Permission[]> = {
 	admin: Object.values(permissions),
-	storekeeper: [permissions.viewProducts, permissions.receiveStock, permissions.adjustStock, permissions.viewStock, permissions.createIssue, permissions.viewAllIssues, permissions.confirmReturns, permissions.viewReports, permissions.postComments],
-	sales: [permissions.viewProducts, permissions.viewOwnIssues, permissions.submitReport, permissions.viewReports, permissions.postComments],
-	accountant: [permissions.viewProducts, permissions.viewStock, permissions.viewAllIssues, permissions.verifyReport, permissions.viewReports, permissions.postComments],
+	storekeeper: [permissions.viewProducts, permissions.receiveStock, permissions.adjustStock, permissions.viewStock, permissions.createIssue, permissions.viewAllIssues, permissions.confirmReturns, permissions.manageAssignments, permissions.viewReports, permissions.postComments],
+	sales: [permissions.viewProducts, permissions.viewOwnIssues, permissions.viewOwnStock, permissions.createOwnReport, permissions.submitReport, permissions.viewReports, permissions.postComments],
+	accountant: [permissions.viewProducts, permissions.viewStock, permissions.viewAllIssues, permissions.verifyReport, permissions.viewFinance, permissions.decidePayments, permissions.viewReports, permissions.postComments],
+	warehouse_manager: [permissions.viewProducts, permissions.receiveStock, permissions.adjustStock, permissions.viewStock, permissions.createIssue, permissions.viewAllIssues, permissions.confirmReturns, permissions.manageAssignments, permissions.viewReports, permissions.postComments],
+	finance: [permissions.viewProducts, permissions.viewStock, permissions.viewAllIssues, permissions.verifyReport, permissions.viewFinance, permissions.decidePayments, permissions.viewReports, permissions.postComments],
 };
 
 export function rolePermissions(role: string | null | undefined): readonly Permission[] {

@@ -1,0 +1,15 @@
+import { useCallback, useEffect, useState } from "react";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, View } from "react-native";
+import { CaretRight, Receipt } from "phosphor-react-native";
+import { getMyReports } from "../api/client";
+import { EmptyState } from "../components/EmptyState";
+import { ErrorState } from "../components/ErrorState";
+import { LoadingState } from "../components/LoadingState";
+import { StatusLabel } from "../components/StatusLabel";
+import { Text } from "../components/Text";
+import { colors, radius, spacing } from "../constants/colors";
+import type { RootStackParamList } from "../navigation/AppNavigator";
+export function SalesHistoryScreen() { const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>(); const [items, setItems] = useState<Awaited<ReturnType<typeof getMyReports>>["items"]>([]); const [loading, setLoading] = useState(true); const [refreshing, setRefreshing] = useState(false); const [error, setError] = useState<string | null>(null); const load = useCallback(async (refresh = false) => { if (refresh) setRefreshing(true); else setLoading(true); try { setItems((await getMyReports()).items); setError(null); } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not load history"); } finally { setLoading(false); setRefreshing(false); } }, []); useEffect(() => { void load(); }, [load]); if (loading) return <LoadingState label="Loading history" />; if (error && !items.length) return <ErrorState message={error} onRetry={() => void load()} />; return <SafeAreaView style={styles.page}><ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} />} contentContainerStyle={styles.content}><Text muted size={13}>Sales workspace</Text><Text bold size={22}>History</Text>{items.length ? items.map((item) => <Pressable key={item.report.id} onPress={() => navigation.navigate("Conversation", { issueId: item.assignment.id })} style={styles.card}><Receipt color={colors.primary} size={20} /><View style={styles.body}><Text bold>{item.report.amount}</Text><Text muted>{item.lines.map((line) => `${line.beverage.name} ${line.racksSold}`).join(", ")}</Text>{item.report.declineReason ? <Text style={styles.error}>{item.report.declineReason}</Text> : null}</View><StatusLabel status={item.report.status} /><CaretRight color={colors.muted} size={18} /></Pressable>) : <EmptyState title="No reports yet" message="Your submitted reports will appear here." />}</ScrollView></SafeAreaView>; }
+const styles = StyleSheet.create({ page: { flex: 1, backgroundColor: colors.background }, content: { padding: spacing.lg, gap: spacing.md }, card: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md }, body: { flex: 1, gap: 3 }, error: { color: colors.danger } });
