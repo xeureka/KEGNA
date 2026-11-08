@@ -56,4 +56,7 @@ coverage/
 # Docker Local Volumes (if applicable)
 postgres_data/
 
+# Local ZOLA file storage
+apps/back-end/storage/
+
 note.ts

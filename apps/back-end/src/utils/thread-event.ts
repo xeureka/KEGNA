@@ -1,0 +1,1 @@
+export async function event(tx: any, issueId: string, actorId: string | null, type: string, payload: unknown) { const [row] = await tx.insert((await import("@/db/schema")).threadEvents).values({ issueId, actorId, type, payload }).returning(); return row; }

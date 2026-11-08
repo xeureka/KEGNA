@@ -1,0 +1,15 @@
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import type { AppEnv } from "@/types/hono";
+import { requireInventoryAuth } from "@/middlewares/inventory-auth";
+import { assertPermission, permissions } from "@/utils/permission";
+import { addDeposit, listReportDeposits, listReports, submitReport } from "@/services/inventory.service";
+import { fileExists } from "@/services/storage.service";
+import { successResponse } from "@/utils/api-response";
+const reportItem = z.object({ product_id: z.string().uuid(), sold: z.number().int().nonnegative(), returned: z.number().int().nonnegative(), damaged: z.number().int().nonnegative() });
+const deposit = z.object({ amount: z.string().regex(/^\d+(?:\.\d{1,2})?$/), bank_name: z.string().min(1), reference_no: z.string().min(1), slip_file_key: z.string().min(1), deposited_at: z.string().datetime().optional() });
+const reports = new OpenAPIHono<AppEnv>(); reports.use("*", requireInventoryAuth());
+reports.openapi(createRoute({ method: "post", path: "/issues/{id}/report", tags: ["Reports"], summary: "Submit sales report", request: { params: z.object({ id: z.string().uuid() }), body: { content: { "application/json": { schema: z.object({ items: z.array(reportItem).min(1), deposits: z.array(deposit).min(1) }) } } } }, responses: { 200: { description: "Submitted", content: { "application/json": { schema: z.any() } } } } }), async (c) => { assertPermission(c, permissions.submitReport); return successResponse(c, await submitReport(c.get("user")!, c.req.valid("param").id, c.req.valid("json"), fileExists)); });
+reports.openapi(createRoute({ method: "get", path: "/reports", tags: ["Reports"], summary: "List reports", responses: { 200: { description: "Reports", content: { "application/json": { schema: z.any() } } } } }), async (c) => { const user = c.get("user")!; assertPermission(c, permissions.viewReports); return successResponse(c, await listReports(user)); });
+reports.openapi(createRoute({ method: "post", path: "/reports/{id}/deposits", tags: ["Reports"], summary: "Add report deposit", request: { params: z.object({ id: z.string().uuid() }), body: { content: { "application/json": { schema: deposit } } } }, responses: { 200: { description: "Deposit added", content: { "application/json": { schema: z.any() } } } } }), async (c) => { assertPermission(c, permissions.submitReport); return successResponse(c, await addDeposit(c.get("user")!, c.req.valid("param").id, c.req.valid("json"), fileExists)); });
+reports.openapi(createRoute({ method: "get", path: "/reports/{id}/deposits", tags: ["Reports"], summary: "List report deposits", request: { params: z.object({ id: z.string().uuid() }) }, responses: { 200: { description: "Deposits", content: { "application/json": { schema: z.any() } } } } }), async (c) => { assertPermission(c, permissions.viewReports); return successResponse(c, await listReportDeposits(c.get("user")!, c.req.valid("param").id)); });
+export default reports;

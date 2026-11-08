@@ -1,0 +1,12 @@
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import type { AppEnv } from "@/types/hono";
+import { requireInventoryAuth } from "@/middlewares/inventory-auth";
+import { assertPermission, permissions } from "@/utils/permission";
+import { createIssue, getIssue, listIssues } from "@/services/inventory.service";
+import { successResponse } from "@/utils/api-response";
+const item = z.object({ product_id: z.string().uuid(), quantity: z.number().int().positive() });
+const issue = new OpenAPIHono<AppEnv>(); issue.use("*", requireInventoryAuth());
+issue.openapi(createRoute({ method: "post", path: "/", tags: ["Issues"], summary: "Create issue load-out", request: { body: { content: { "application/json": { schema: z.object({ sales_user_id: z.string(), items: z.array(item).min(1), note: z.string().optional() }) } } } }, responses: { 200: { description: "Created", content: { "application/json": { schema: z.any() } } } } }), async (c) => { assertPermission(c, permissions.createIssue); return successResponse(c, await createIssue(c.get("user")!, c.req.valid("json"))); });
+issue.openapi(createRoute({ method: "get", path: "/", tags: ["Issues"], summary: "List issues", request: { query: z.object({ status: z.enum(["open", "reported", "returns_confirmed", "verified", "flagged"]).optional(), sales_user_id: z.string().optional(), from: z.coerce.date().optional(), to: z.coerce.date().optional(), limit: z.coerce.number().int().min(1).max(200).default(50), offset: z.coerce.number().int().min(0).default(0) }) }, responses: { 200: { description: "Issues", content: { "application/json": { schema: z.any() } } } } }), async (c) => { const user = c.get("user")!; if (user.role === "sales") assertPermission(c, permissions.viewOwnIssues); else assertPermission(c, permissions.viewAllIssues); const q = c.req.valid("query"); return successResponse(c, await listIssues(user, { status: q.status, salesUserId: q.sales_user_id, from: q.from, to: q.to, limit: q.limit, offset: q.offset })); });
+issue.openapi(createRoute({ method: "get", path: "/{id}", tags: ["Issues"], summary: "Get issue detail and reconciliation", request: { params: z.object({ id: z.string().uuid() }) }, responses: { 200: { description: "Issue detail", content: { "application/json": { schema: z.any() } } } } }), async (c) => { const user = c.get("user")!; if (user.role === "sales") assertPermission(c, permissions.viewOwnIssues); else assertPermission(c, permissions.viewAllIssues); return successResponse(c, await getIssue(user, c.req.valid("param").id)); });
+export default issue;

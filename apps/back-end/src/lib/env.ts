@@ -10,6 +10,7 @@ const envSchema = z.object({
 	BETTER_AUTH_URL: z.string().url(),
 	WEB_APP_URL: z.string().url().default("http://localhost:5173"),
 	CORS_ORIGINS: z.string().min(1).default("http://localhost:5173"),
+	STORAGE_DIR: z.string().trim().min(1).default("./storage"),
 	LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error", "fatal"]).default("info"),
 });
 

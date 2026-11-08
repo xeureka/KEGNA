@@ -1,0 +1,11 @@
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import { sql } from "drizzle-orm";
+import { db } from "@/db";
+import type { AppEnv } from "@/types/hono";
+import { requireInventoryAuth } from "@/middlewares/inventory-auth";
+import { assertPermission, permissions } from "@/utils/permission";
+import { issues, stockMovements } from "@/db/schema";
+import { successResponse } from "@/utils/api-response";
+const dashboard = new OpenAPIHono<AppEnv>(); dashboard.use("*", requireInventoryAuth());
+dashboard.openapi(createRoute({ method: "get", path: "/summary", tags: ["Dashboard"], summary: "Get dashboard summary", responses: { 200: { description: "Summary", content: { "application/json": { schema: z.any() } } } } }), async (c) => { const user = c.get("user")!; assertPermission(c, permissions.viewReports); const statusRows = await db.select({ status: issues.status, count: sql<number>`count(*)` }).from(issues).groupBy(issues.status); const flagged = statusRows.find((row) => row.status === "flagged")?.count ?? 0; if (user.role === "accountant") return successResponse(c, { pending: statusRows.filter((row) => ["reported", "returns_confirmed"].includes(row.status)).reduce((sum, row) => sum + Number(row.count), 0), flagged: Number(flagged) }); const balances = await db.select({ productId: stockMovements.productId, warehouse: sql<number>`coalesce(sum(${stockMovements.warehouseDelta}),0)`, held: sql<number>`coalesce(sum(${stockMovements.holderDelta}),0)` }).from(stockMovements).groupBy(stockMovements.productId); return successResponse(c, { balances, issuesByStatus: statusRows, flagged: Number(flagged), racksWithSalespeople: balances.reduce((sum, row) => sum + Number(row.held), 0) }); });
+export default dashboard;

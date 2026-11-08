@@ -1,0 +1,9 @@
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import type { AppEnv } from "@/types/hono";
+import { requireInventoryAuth } from "@/middlewares/inventory-auth";
+import { uploadImage, readIssueFile } from "@/services/files.service";
+import { successResponse } from "@/utils/api-response";
+const files = new OpenAPIHono<AppEnv>(); files.use("*", requireInventoryAuth());
+files.openapi(createRoute({ method: "post", path: "/", tags: ["Files"], summary: "Upload bank slip image", request: { body: { content: { "multipart/form-data": { schema: z.object({ file: z.any() }) } } } }, responses: { 200: { description: "Uploaded", content: { "application/json": { schema: z.any() } } } } }), async (c) => { const body = await c.req.parseBody(); const file = body.file; if (!(file instanceof File)) throw new Error("file is required"); return successResponse(c, await uploadImage(file)); });
+files.openapi(createRoute({ method: "get", path: "/{key}", tags: ["Files"], summary: "Read bank slip image", request: { params: z.object({ key: z.string().min(1) }) }, responses: { 200: { description: "Image", content: { "image/jpeg": { schema: z.any() }, "image/png": { schema: z.any() }, "image/webp": { schema: z.any() } } } } }), async (c) => { const result = await readIssueFile(c.get("user")!, c.req.valid("param").key); return new Response(result.data, { headers: { "Content-Type": result.contentType, "Cache-Control": "private, max-age=300" } }); });
+export default files;
