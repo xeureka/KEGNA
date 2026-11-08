@@ -3,10 +3,10 @@ import { env } from "@/lib/env";
 import { serializeError } from "./serializers";
 
 export const logger = pino({
-	name: "nexa-crm-api",
+	name: "zola-inventory-api",
 	level: env.LOG_LEVEL,
 	base: {
-		service: "nexa-crm-api",
+		service: "zola-inventory-api",
 		environment: env.NODE_ENV,
 	},
 	serializers: {
@@ -24,8 +24,6 @@ export const logger = pino({
 			"req.headers.authorization",
 			"req.headers.cookie",
 			"req.headers.KEY",
-			"SMS_ETHIOPIA",
-			"otp",
 		],
 		censor: "[REDACTED]",
 	},

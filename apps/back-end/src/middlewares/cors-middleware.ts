@@ -7,7 +7,6 @@ export const corsMiddleware = cors({
 		"Authorization",
 		"Cookie",
 		"x-host",
-		"x-tenant-id",
 	],
 	allowMethods: ["POST", "GET", "OPTIONS", "PUT", "DELETE", "PATCH"],
 	exposeHeaders: ["Content-Length", "Set-Cookie", "set-auth-token"],

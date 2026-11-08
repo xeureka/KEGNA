@@ -18,9 +18,7 @@ export const loggingMiddleware = structuredLogger({
 				method: c.req.method,
 				path: c.req.path,
 				userAgent: c.req.header("user-agent"),
-				client: c.req.header("x-nexa-tenant-id") ? "mobile" : "web",
-				declaredTenantId: c.req.header("x-nexa-tenant-id"),
-				declaredTenantSlug: c.req.header("x-nexa-tenant-slug"),
+				client: c.req.header("user-agent")?.includes("Expo") ? "mobile" : "web",
 			},
 			"incoming request",
 		);
@@ -34,9 +32,7 @@ export const loggingMiddleware = structuredLogger({
 			path: c.req.path,
 			status,
 			durationMs: Number(elapsedMs.toFixed(2)),
-			client: c.req.header("x-nexa-tenant-id") ? "mobile" : "web",
-			declaredTenantId: c.req.header("x-nexa-tenant-id"),
-			declaredTenantSlug: c.req.header("x-nexa-tenant-slug"),
+			client: c.req.header("user-agent")?.includes("Expo") ? "mobile" : "web",
 		};
 
 		if (status >= 500) {
@@ -59,9 +55,7 @@ export const loggingMiddleware = structuredLogger({
 				method: c.req.method,
 				path: c.req.path,
 				durationMs: Number(elapsedMs.toFixed(2)),
-				client: c.req.header("x-nexa-tenant-id") ? "mobile" : "web",
-				declaredTenantId: c.req.header("x-nexa-tenant-id"),
-				declaredTenantSlug: c.req.header("x-nexa-tenant-slug"),
+				client: c.req.header("user-agent")?.includes("Expo") ? "mobile" : "web",
 			},
 			"request failed",
 		);

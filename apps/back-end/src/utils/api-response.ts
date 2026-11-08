@@ -10,7 +10,7 @@ import type { TypedResponse } from "hono";
  *   "success": true,
  *   "data": {
  *     "id": "apt_123",
- *     "patientId": "pat_456",
+	 *     "sku": "STG-330",
  *     "startTime": "2026-09-01T10:00:00.000Z"
  *   }
  * }

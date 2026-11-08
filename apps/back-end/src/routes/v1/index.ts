@@ -1,68 +1,61 @@
-import { OpenAPIHono } from "@hono/zod-openapi";
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import type { AppEnv } from "@/types/hono";
-import { helloRoute } from "./hello";
-import authRouter from "../auth";
-import patientsRouter from "./patients";
-import doctorsRouter from "./doctors";
-import appointmentsRouter from "./appointments";
-import proceduresRouter from "./procedures";
-import dentalChartRouter from "./dental-chart";
-import schedulesRouter from "./schedules";
-import medicalRecordsRouter from "./medical-records";
-import billingRouter from "./bills";
-import reportsRouter from "./reports";
-import membersRouter from "./members";
-import auditLogsRouter from "./audit-logs";
-import dashboardRouter from "./dashboard";
-import superAdminRouter from "./super-admin";
-import paymentWebhookRouter from "./payment-webhook";
-import paymentsRouter from "./payments";
-import cardsRouter from "./cards";
-import mobileRouter from "./mobile";
-import tipsRouter from "./tips";
-import { requireTenantAuth } from "@/middlewares/tenant-auth.middleware";
+import { auth } from "@/lib/auth";
+import { rolePermissions } from "@/utils/permission";
 
 const v1 = new OpenAPIHono<AppEnv>();
-const tenantApi = new OpenAPIHono<AppEnv>();
-tenantApi.use("*", requireTenantAuth());
+const authRoute = new OpenAPIHono<AppEnv>();
 
-v1.openapi(helloRoute, (c) => {
-	return c.json({
-		success: true as const,
-		data: {
-			message: "Hello from Nexa CRM API!",
-			timestamp: new Date().toISOString(),
-		},
-	});
+const responseSchema = z.object({
+	success: z.literal(true),
+	data: z.object({
+		user: z.object({ id: z.string(), name: z.string(), email: z.string(), role: z.string() }),
+		sessionToken: z.string(),
+		permissions: z.array(z.string()),
+	}),
 });
 
-v1.route("/auth", authRouter);
-// Register the platform-scoped routes before the catch-all tenant router.
-// Otherwise tenantApi's global requireTenantAuth middleware also intercepts
-// /super-admin/* and incorrectly demands an active tenant binding.
-v1.route("/super-admin", superAdminRouter);
-// The Chapa webhook must also precede the tenant catch-all: Chapa posts without
-// a session, and `tenantApi.use("*", requireTenantAuth())` would 401 it before
-// the signature could ever be checked.
-v1.route("/payments/webhook", paymentWebhookRouter);
-v1.route("/payments/chapa", paymentWebhookRouter);
-tenantApi.route("/patients", patientsRouter);
-tenantApi.route("/doctors", doctorsRouter);
-tenantApi.route("/appointments", appointmentsRouter);
-tenantApi.route("/procedures", proceduresRouter);
-tenantApi.route("/dental-chart", dentalChartRouter);
-tenantApi.route("/schedules", schedulesRouter);
-tenantApi.route("/medical-records", medicalRecordsRouter);
-tenantApi.route("/bills", billingRouter);
-tenantApi.route("/reports", reportsRouter);
-tenantApi.route("/members", membersRouter);
-tenantApi.route("/audit-logs", auditLogsRouter);
-tenantApi.route("/dashboard", dashboardRouter);
-tenantApi.route("/mobile", mobileRouter);
-tenantApi.route("/tips", tipsRouter);
-tenantApi.route("/payments", paymentsRouter);
-// Alias for the membership card catalog; also reachable under /payments/cards.
-tenantApi.route("/cards", cardsRouter);
-v1.route("/", tenantApi);
+const helloRoute = createRoute({
+	method: "get", path: "/hello",
+	responses: { 200: { description: "Health response", content: { "application/json": { schema: z.object({ success: z.literal(true), data: z.object({ message: z.string() }) }) } } } },
+});
+v1.openapi(helloRoute, (c) => c.json({ success: true as const, data: { message: "Hello from ZOLA Inventory API" } }));
 
+const loginRoute = createRoute({
+	method: "post", path: "/login",
+	request: { body: { content: { "application/json": { schema: z.object({ email: z.string().email(), password: z.string().min(8) }) } } } },
+	responses: { 200: { description: "Signed in", content: { "application/json": { schema: responseSchema } } }, 401: { description: "Invalid credentials" } },
+});
+authRoute.openapi(loginRoute, async (c) => {
+	const body = c.req.valid("json");
+	const result = await auth.api.signInEmail({ body: { email: body.email, password: body.password } });
+	if (!result?.user || !result.token) return c.json({ success: false, error: { code: "UNAUTHORIZED", message: "Invalid credentials" } }, 401);
+	const role = result.user.role ?? "sales";
+	return c.json({ success: true as const, data: { user: { id: result.user.id, name: result.user.name, email: result.user.email, role }, sessionToken: result.token, permissions: [...rolePermissions(role)] } });
+});
+
+const meRoute = createRoute({
+	method: "get", path: "/me",
+	responses: {
+		200: { description: "Current session", content: { "application/json": { schema: responseSchema } } },
+		401: { description: "Unauthenticated" },
+	},
+});
+authRoute.openapi(meRoute, async (c) => {
+	const session = await auth.api.getSession({ headers: c.req.raw.headers });
+	if (!session?.user) return c.json({ success: false, error: { code: "UNAUTHORIZED", message: "Authentication required" } }, 401);
+	const role = session.user.role ?? "sales";
+	return c.json({ success: true as const, data: { user: { id: session.user.id, name: session.user.name, email: session.user.email, role }, sessionToken: session.session.token, permissions: [...rolePermissions(role)] } });
+});
+
+const logoutRoute = createRoute({
+	method: "post", path: "/logout",
+	responses: { 200: { description: "Signed out", content: { "application/json": { schema: z.object({ success: z.literal(true), data: z.object({ ok: z.literal(true) }) }) } } } },
+});
+authRoute.openapi(logoutRoute, async (c) => {
+	await auth.api.signOut({ headers: c.req.raw.headers });
+	return c.json({ success: true as const, data: { ok: true as const } });
+});
+
+v1.route("/auth", authRoute);
 export default v1;

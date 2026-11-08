@@ -15,19 +15,3 @@ export class AppError extends Error {
 	}
 }
 
-/* ANYWHERE IN THE BACKEND
-
-throw new AppError(
-  "Patient not found",
-  404,
-  "PATIENT_NOT_FOUND",
-);
-
-    or 
-
-throw new AppError(
-  "You do not have permission to perform this action",
-  403,
-  ErrorCode.FORBIDDEN,
-);
-*/

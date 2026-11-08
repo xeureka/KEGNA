@@ -93,7 +93,7 @@ export const errorHandler = (error: Error, c: Context) => {
 	});
 };
 
-/** Patient-facing copy for Postgres error classes we can recognise. */
+/** User-facing copy for Postgres error classes we can recognise. */
 function friendlyDatabaseMessage(code: string | undefined): string {
 	switch (code) {
 		case "23505":
@@ -102,14 +102,14 @@ function friendlyDatabaseMessage(code: string | undefined): string {
 			return "That record is still in use, so it can't be changed yet.";
 		case "23514":
 		case "23P01":
-			return "Those details don't match the clinic's rules. Please review and try again.";
+			return "Those details do not match the warehouse rules. Please review and try again.";
 		case "25P02":
 		case "40001":
 		case "40P01":
 			return "The request was interrupted by another action. Please try again.";
 		case "57014":
 		case "53300":
-			return "The clinic database is busy right now. Please try again shortly.";
+			return "The warehouse database is busy right now. Please try again shortly.";
 		default:
 			return "We couldn't complete that request. Please try again.";
 	}

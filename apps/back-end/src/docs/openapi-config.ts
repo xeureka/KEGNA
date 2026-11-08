@@ -6,8 +6,8 @@ export const setupOpenAPI = (app: OpenAPIHono) => {
 		openapi: "3.1.0",
 		info: {
 			version: "1.0.0",
-			title: "NEXA DENTAL CRM API",
-			description: "API documentation for the Nexa Dental CRM system",
+			title: "ZOLA Beer Warehouse Inventory API",
+			description: "API documentation for the ZOLA beer warehouse inventory system",
 		},
 	});
 
@@ -15,7 +15,7 @@ export const setupOpenAPI = (app: OpenAPIHono) => {
 		"/docs",
 		apiReference({
 			theme: "purple",
-			pageTitle: "Nexa CRM API Documentation",
+			pageTitle: "ZOLA Inventory API Documentation",
 			spec: {
 				url: "/openapi.json",
 			},
