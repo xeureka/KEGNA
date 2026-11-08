@@ -11,7 +11,7 @@ and accountants.
 - PostgreSQL
 - Hono, Drizzle, Better Auth, OpenAPI/Scalar
 - React/Vite web dashboard
-- Expo SDK 57 mobile app
+- Expo SDK 58 mobile app
 
 Install dependencies with pnpm:
 
@@ -103,3 +103,21 @@ If `expo-doctor` reports `Failed to parse JSON output from npx expo config`,
 run `pnpm exec expo config --json --full` directly. This is an Expo Doctor
 wrapper/tooling issue when the local environment cannot provide parseable JSON;
 it is not caused by the ZOLA app config.
+
+## Verify everything
+
+Run the complete bounded local verification flow with:
+
+```bash
+pnpm verify
+```
+
+This typechecks and lints all workspaces, builds the web and API, resets and
+seeds the disposable development database, starts the built API on port 3011,
+runs the API smoke flow, resets the database again, verifies a seeded login,
+and performs the Expo config and Android export checks. It refuses production
+mode, prints only the database hostname, and always stops its temporary API.
+
+If the restricted agent environment reports `EPERM` while creating a tsx IPC
+pipe, opening a TCP listener, or opening pnpm's SQLite store, run `pnpm verify`
+from a normal local terminal with a writable user pnpm store.

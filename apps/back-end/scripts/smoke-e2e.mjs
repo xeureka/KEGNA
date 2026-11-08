@@ -1,8 +1,11 @@
 import process from "node:process";
+import fs from "node:fs";
 
 if (process.env.NODE_ENV === "production") throw new Error("smoke-e2e refuses to run in production");
 const base = (process.env.SMOKE_API_URL ?? "http://127.0.0.1:3001").replace(/\/$/, "") + "/api/v1";
-const password = process.env.SMOKE_PASSWORD ?? process.env.SEED_PASSWORD;
+const localEnv = (() => { for (const file of [".env", "apps/back-end/.env", "../../apps/back-end/.env"]) { try { return fs.readFileSync(file, "utf8"); } catch {} } return ""; })();
+const envValue = (key) => { const match = localEnv.match(new RegExp(`^${key}=(.*)$`, "m")); return match?.[1]?.trim().replace(/^['"]|['"]$/g, ""); };
+const password = process.env.SMOKE_PASSWORD ?? process.env.SEED_PASSWORD ?? envValue("SEED_PASSWORD");
 if (!password) throw new Error("Set SEED_PASSWORD or SMOKE_PASSWORD before running smoke-e2e");
 
 const results = [];
@@ -68,6 +71,12 @@ await expect("other sales cannot submit report", `/issues/${issue1Id}/report`, o
 await expect("other sales cannot read slip", `/files/${slipKey}`, otherSales.sessionToken, "GET", undefined, 403);
 const report1 = await json(`/issues/${issue1Id}/report`, sales.sessionToken, "POST", { items: [{ product_id: productId, sold: 3, returned: 1, damaged: 1 }], deposits: [{ amount: "300.00", bank_name: "Smoke Bank", reference_no: "smoke-1", slip_file_key: slipKey }] });
 pass("sales submits report", report1.response.status === 200);
+const salesSummary = await json("/dashboard/summary", sales.sessionToken);
+pass("sales summary includes holdings", salesSummary.response.status === 200 && Array.isArray(salesSummary.body?.data?.holdings) && salesSummary.body.data.holdings.some((row) => row.productId === productId));
+const accountantSummary = await json("/dashboard/summary", accountant.sessionToken);
+pass("accountant summary pending rises", accountantSummary.response.status === 200 && Number(accountantSummary.body?.data?.pending) >= 1);
+const reportRows = await json("/reports?status=submitted", accountant.sessionToken);
+pass("accountant report list has reconciliation", reportRows.response.status === 200 && reportRows.body.data.some((row) => row.report.id === report1.body.data.id && typeof row.reconciliation.expected_cash === "string"));
 await expect("storekeeper confirms returns", `/issues/${issue1Id}/confirm-returns`, storekeeper.sessionToken, "POST", { items: [{ product_id: productId, returned: 1, damaged: 1 }] }, 200);
 const reconciliation = await json(`/issues/${issue1Id}`, accountant.sessionToken);
 pass("accountant reads reconciliation", reconciliation.response.status === 200 && reconciliation.body.data.reconciliation.cash_variance === "0.00");
@@ -90,6 +99,7 @@ await expect("thread read resets unread", `/threads/${issue1Id}/read`, sales.ses
 const readThreads = await json("/threads", sales.sessionToken);
 pass("thread unread count resets", Number(readThreads.body.data.find((row) => row.issue.id === issue1Id)?.unreadCount) === 0);
 await expect("comment posts", `/threads/${issue1Id}/comments`, sales.sessionToken, "POST", { text: "Smoke comment" }, 200);
+await expect("accountant comment posts", `/threads/${issue1Id}/comments`, accountant.sessionToken, "POST", { text: "Accountant review comment" }, 200);
 const auditLog = await json("/audit-logs?page=1&pageSize=10", seededAdmin.sessionToken);
 pass("admin can read audit log", auditLog.response.status === 200 && Array.isArray(auditLog.body?.data));
 await expect("sales cannot read audit log", "/audit-logs", sales.sessionToken, "GET", undefined, 403);

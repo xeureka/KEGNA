@@ -59,6 +59,52 @@ Repository: `/home/eureka/Desktop/Code/KEGNA/KEGNA`
 
 The remaining device-only validation is an Expo Go run against the deployed API, especially authenticated slip display and image-picker permissions. No backend schema was changed in Phase 10.
 
+### Phase 10 completion audit
+
+| Capability | Works here? | Evidence |
+|---|---:|---|
+| Git index write | No | `git commit --allow-empty` failed with read-only `.git/index.lock`. |
+| tsx execution | Version only | `tsx --version` works, but executing tsx fails creating an IPC pipe even with `TMPDIR=.tmp`. |
+| Local TCP listener | No | Node listener on 127.0.0.1:3011 fails with `EPERM`. |
+| Metro/export through pnpm filter | No | pnpm fails opening its SQLite store database before Expo starts. |
+| Static TypeScript/lint/build checks | Yes | Backend/mobile typecheck and backend build passed in the agent session; mobile lint was clean before the final UI-only additions. |
+
+### Runtime-error hunt
+
+| File | Finding | Fix |
+|---|---|---|
+| `apps/mobile/src/api/storage.ts` | Native path used unsupported synchronous SecureStore methods. | Uses the async SecureStore API and hydrates the in-memory token cache. |
+| `apps/mobile/src/api/client.ts` | Requests mixed bearer and cookie authentication. | Uses the persisted bearer token consistently and sends the trusted `zola://` origin. |
+| `apps/mobile/src/hooks/useThreads.ts` | `toSorted` was not Hermes-safe. | Sorts a copied array with `.sort()`. |
+| `apps/mobile/src/hooks/useThreadEvents.ts` | `toSorted` was not Hermes-safe. | Sorts a copied array with `.sort()`. |
+| `apps/mobile/App.tsx` | Render errors and unhandled rejections had no visible recovery path. | Added `AppErrorBoundary` and global runtime reporting. |
+| `apps/mobile/src/screens/ProfileScreen.tsx` | No device-visible API/session diagnostic existed. | Added development-only base URL, role/session and authenticated-call status. |
+| `apps/mobile/src/components/ReconciliationCard.tsx` | Slip keys were not viewable from mobile. | Added authenticated thumbnail loading and full-screen modal viewing via request headers. |
+
+No unsupported Hermes built-ins remain in `apps/mobile/src`; no direct component-level API `fetch` calls were found outside the centralized client and upload source fetch.
+
+### Final mobile wiring
+
+| Screen | Element | Handler | API call | Status |
+|---|---|---|---|---|
+| Login | Sign in/password visibility | `AuthContext.signIn`, local visibility state | Auth login / `/auth/me` | Wired |
+| Chat list | Search, role-specific status chips, refresh, open conversation, profile | local state, `useThreads`, navigation | `/threads`, `/threads/:id/events` | Wired |
+| Sales home | Summary metrics and load action | `useMobileSummary`, navigation | `/dashboard/summary`, `/issues/:id` | Wired |
+| Sales report | Quantity validation, slip picker, upload, submit | `ReportSheet` | `/files`, `/issues/:id/report` | Wired |
+| Reports | Status filters and report opening | `useMobileReports` | `/reports`, `/issues/:id` | Wired |
+| Accountant conversation | Reconciliation, approve, flag, required note | `useVerifyReport`, flag modal | `/issues/:id`, `/reports/:id/verify` | Wired |
+| Conversation | Comments, read state, polling, older events | `send`, `markThreadRead`, event hook | `/threads/:id/comments`, `/threads/:id/read`, `/threads/:id/events` | Wired |
+| Slip evidence | Thumbnail and full-screen viewer | `SlipPreview` | Authenticated `/files/:key` | Wired |
+| Profile | Sign out and development connection diagnostics | `signOut`, connection effect | `/auth/logout`, `/auth/me` | Wired |
+
+### Verification command
+
+`scripts/verify-local.sh` is the single-command verification entry point exposed
+as `pnpm verify`. It uses the built API rather than tsx, traps cleanup, resets
+the disposable database before and after the smoke run, and never prints
+credentials. This agent could not execute the network/export portions because
+of the capability failures above; run `pnpm verify` in a normal local terminal.
+
 This document records the repository state before implementation changes. No application source, configuration, schema, migration, or dependency files were changed for Phase 0.
 
 ## Decisions
