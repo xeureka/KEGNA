@@ -4,7 +4,7 @@ export const appConfig = {
 	scheme: "zola",
 	version: "1.0.0",
 	bundleIdentifier: "com.zola.app",
-	easProjectId: "807a1e65-5dc1-4f2b-ab1c-251964fb4d30",
+	easProjectId: "49ce873f-ba1f-4b3c-a341-e548341a0133",
 	assets: {
 		icon: "./assets/icon.png",
 		splash: "./assets/splash-icon.png",
