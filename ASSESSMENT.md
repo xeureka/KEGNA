@@ -11,6 +11,54 @@ original discovery record.
 Assessment date: 2026-11-08  
 Repository: `/home/eureka/Desktop/Code/KEGNA/KEGNA`
 
+## Phase 10 — Mobile stabilization and completion
+
+### Findings and fixes
+
+| Area | Finding | Action/status |
+|---|---|---|
+| Native authentication | `storage.ts` called synchronous SecureStore methods that are not part of the Expo SecureStore API. | Fixed with `getItemAsync`, `setItemAsync`, `deleteItemAsync`, memory hydration, and one bearer request path. |
+| Hermes compatibility | Mobile hooks used `toSorted`, which is not safe across the supported Hermes runtime. | Replaced with copied-array `.sort()` in `useThreads` and `useThreadEvents`. |
+| API data | The existing dashboard response only exposed accountant counts and warehouse widgets; mobile summary requirements were missing. | Added role-aware `GET /api/v1/dashboard/summary` output through a repository/service. |
+| Reports | `GET /reports` returned only report/issue records and had no filters or reconciliation values. | Added status, salesperson, date and pagination query handling plus reconciliation and salesperson data. |
+| Runtime visibility | Render failures and unhandled promise rejections had no app-level presentation. | Added `AppErrorBoundary`, global handler wiring, and a dev-only Profile connection diagnostic. |
+| Repository input | `inventory-implementation-plan.md` is referenced by the task but is not present in the repository. | Recorded as an input discrepancy; `project-impl.md`, `SRS.md`, and the existing assessment were used. |
+
+### Mobile requirements and API gap table
+
+| Requirement | Screen | Endpoint | Exists | Gap/status |
+|---|---|---|---|---|
+| Email/password sign-in, sign-out, profile | Auth/Profile | `/auth/login`, `/auth/logout`, `/auth/me` | Yes | Wired; native bearer persistence fixed |
+| Sales own load-outs, search, unread and status filtering | Chat list | `/threads` | Yes | Search/filter remains client-side |
+| Sales summary holdings, open loads, report counts and cash totals | Home/Summary | `/dashboard/summary` | Now yes | Role-aware response added |
+| Accountant summary and per-salesperson totals | Overview | `/dashboard/summary` | Now yes | Role-aware response added |
+| Conversation events/comments/read | Conversation | `/threads/:id/events`, `/comments`, `/read` | Yes | Existing handlers retained |
+| Sales report and bank-slip upload | Report sheet | `/issues/:id/report`, `/files` | Yes | Existing flow retained; API now uses stable bearer auth |
+| Additional deposit | Conversation/report flow | `/reports/:id/deposits` | Yes | Existing endpoint retained |
+| Accountant reconciliation and approve/flag | Conversation | `/issues/:id`, `/reports/:id/verify` | Yes | Existing handlers retained |
+| Report history with expected/deposited/variance values | Reports | `/reports` | Partial | Filters and reconciliation rows added |
+| Authenticated slip image viewer | Conversation | `/files/:key` | Backend yes | Mobile full-screen viewer remains a follow-up |
+| Push notifications | All | Push provider | No | Explicitly out of scope; polling remains the agreed MVP behavior |
+
+### Phase 10 endpoint additions
+
+- `GET /api/v1/dashboard/summary?from=&to=`: sales receives own holdings/open-load and cash totals; accountant receives pending/flagged/verified and cash/per-salesperson totals; admin/storekeeper retain their existing warehouse summary.
+- `GET /api/v1/reports?status=&sales_user_id=&from=&to=&limit=&offset=`: role-filtered report rows with salesperson and server-computed reconciliation.
+
+### Interactive mobile wiring
+
+| Screen/action | Handler | Server call |
+|---|---|---|
+| Login | `AuthContext.signIn` | Better Auth/custom auth login |
+| Chat refresh/open/filter | `useThreads`, navigation | `/threads`, `/threads/:id/events` |
+| Report submit | `ReportSheet`/conversation action | `/files`, `/issues/:id/report` |
+| Accountant approve/flag | conversation verification action | `/reports/:id/verify` |
+| Comment/read | conversation composer/read effect | `/threads/:id/comments`, `/threads/:id/read` |
+| Reports filter/open | `useMobileReports` | `/reports`, `/issues/:id` |
+| Profile connection/sign-out | `ProfileScreen` | `/auth/me`, `/auth/logout` |
+
+The remaining device-only validation is an Expo Go run against the deployed API, especially authenticated slip display and image-picker permissions. No backend schema was changed in Phase 10.
+
 This document records the repository state before implementation changes. No application source, configuration, schema, migration, or dependency files were changed for Phase 0.
 
 ## Decisions

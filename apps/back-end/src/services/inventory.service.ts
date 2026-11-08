@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
 import { db } from "@/db";
 import { AppError } from "@/lib/errors/app-error";
 import { ErrorCode } from "@/lib/errors/error-codes";
@@ -111,7 +111,16 @@ export async function addDeposit(actor: Actor, reportId: string, input: { amount
 	cents(input.amount); if (!await fileExists(input.slip_file_key)) bad("Bank slip file was not found");
 	return db.transaction(async (tx) => { const report = (await tx.select().from(salesReports).where(eq(salesReports.id, reportId)).limit(1))[0]; if (!report) bad("Report not found", 404); const issue = (await tx.select().from(issues).where(eq(issues.id, report.issueId)).limit(1))[0]; if (!issue || !canSeeIssue(actor, issue)) bad("Forbidden", 403, ErrorCode.FORBIDDEN); if (issue.status !== "reported") bad("Deposits can only be added while the issue is reported", 409); const deposit = (await tx.insert(deposits).values({ reportId, amount: input.amount, bankName: input.bank_name, referenceNo: input.reference_no, slipFileKey: input.slip_file_key, depositedAt: input.deposited_at ? new Date(input.deposited_at) : new Date() }).returning())[0]; await event(tx, issue.id, actor.id, "deposit_added", { amount: input.amount, bankName: input.bank_name, referenceNo: input.reference_no }); await writeAudit(tx, { actorUserId: actor.id, action: "CREATE", entityType: "deposit", entityId: deposit?.id, newValues: deposit }); return deposit; });
 }
-export async function listReports(actor: Actor) { const rows = await db.select({ report: salesReports, issue: issues }).from(salesReports).innerJoin(issues, eq(issues.id, salesReports.issueId)).orderBy(desc(salesReports.submittedAt)); return actor.role === "sales" ? rows.filter((row: any) => row.report.salesUserId === actor.id) : rows; }
+export async function listReports(actor: Actor, filters: { status?: string; salesUserId?: string; from?: Date; to?: Date; limit?: number; offset?: number } = {}) {
+	const conditions = [];
+	if (actor.role === "sales") conditions.push(eq(salesReports.salesUserId, actor.id));
+	if (filters.salesUserId) conditions.push(eq(salesReports.salesUserId, filters.salesUserId));
+	if (filters.status) conditions.push(eq(salesReports.status, filters.status as never));
+	if (filters.from) conditions.push(gte(salesReports.submittedAt, filters.from));
+	if (filters.to) conditions.push(lte(salesReports.submittedAt, filters.to));
+	const rows = await db.select({ report: salesReports, issue: issues, salesperson: { id: users.id, name: users.name, email: users.email } }).from(salesReports).innerJoin(issues, eq(issues.id, salesReports.issueId)).innerJoin(users, eq(users.id, salesReports.salesUserId)).where(conditions.length ? and(...conditions) : undefined).orderBy(desc(salesReports.submittedAt)).limit(filters.limit ?? 100).offset(filters.offset ?? 0);
+	return Promise.all(rows.map(async (row) => { const detail = await aggregate(db, row.issue.id); return { ...row, reconciliation: detail.reconciliation }; }));
+}
 export async function listReportDeposits(actor: Actor, reportId: string) { const report = (await reportsRepository.findById(reportId))[0]; if (!report) bad("Report not found", 404); const issue = (await db.select().from(issues).where(eq(issues.id, report.issueId)).limit(1))[0]; if (!issue || !canSeeIssue(actor, issue)) bad("Forbidden", 403, ErrorCode.FORBIDDEN); return reportsRepository.listDeposits(reportId); }
 
 export async function confirmReturns(actor: Actor, issueId: string, input: { items: ItemInput[]; note?: string }) {

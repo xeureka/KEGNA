@@ -197,6 +197,36 @@ export interface UploadedFile {
 	size: number;
 }
 
+export interface SalesSummary {
+	pending: number;
+	flagged: number;
+	verifiedToday: number;
+	soldRacks: number;
+	openIssues: number;
+	expectedCash: string;
+	depositedCash: string;
+	cashVariance: string;
+	holdings: { productId: string; name: string; racks: number }[];
+}
+
+export interface AccountantSummary {
+	pending: number;
+	flagged: number;
+	verifiedToday: number;
+	soldRacks: number;
+	expectedCash: string;
+	depositedCash: string;
+	cashVariance: string;
+	salespersonTotals: { userId: string; name: string; sold: number; expected: string; deposited: string; variance: string }[];
+}
+
+export interface ReportListRow {
+	report: SalesReport;
+	issue: Issue;
+	salesperson: Salesperson;
+	reconciliation: Reconciliation;
+}
+
 export interface ReportItemInput {
 	product_id: string;
 	sold: number;

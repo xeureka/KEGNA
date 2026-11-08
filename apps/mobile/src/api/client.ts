@@ -1,5 +1,3 @@
-import { Platform } from "react-native";
-
 import { appConfig } from "../../config/app";
 import { getApiBaseUrl, getApiHostDiagnostics } from "../config/runtime";
 import type {
@@ -12,8 +10,10 @@ import type {
 	ThreadRow,
 	UploadedFile,
 	Verification,
+	AccountantSummary,
+	ReportListRow,
+	SalesSummary,
 } from "../types";
-import { authClient } from "./auth-client";
 import { mobileStorage } from "./storage";
 
 type ApiEnvelope<T> = { success: true; data: T; message?: string };
@@ -28,12 +28,11 @@ const TOKEN_KEY = `${appConfig.slug}-api-session-token`;
 
 let accessToken: string | null = null;
 let unauthorizedHandler: (() => void) | null = null;
-const tokenHydration = Promise.resolve(mobileStorage.getItem(TOKEN_KEY)).then(
+const tokenHydration = mobileStorage.getItemAsync(TOKEN_KEY).then(
 	(token) => {
 		accessToken = token;
 	},
 );
-const cookieHydration = tokenHydration;
 
 export class MobileApiError extends Error {
 	constructor(
@@ -62,15 +61,12 @@ export function getMobileAccessToken() {
 }
 
 async function authHeaders() {
-	await cookieHydration;
+	await tokenHydration;
 	const headers = new Headers();
 	if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
-	try {
-		const cookie = await authClient.getCookie();
-		if (cookie) headers.set("Cookie", cookie);
-	} catch {
-		// Cookie support is optional when the bearer token is available.
-	}
+	// Native requests use the bearer returned by the inventory sign-in endpoint.
+	// The scheme is also used by Better Auth's trusted-origin configuration.
+	headers.set("Origin", "zola://");
 	return headers;
 }
 
@@ -200,6 +196,23 @@ export function getIssue(issueId: string) {
 	return request<IssueDetail>(`/issues/${encodeURIComponent(issueId)}`);
 }
 
+export function getDashboardSummary(from?: string, to?: string) {
+	const params = new URLSearchParams();
+	if (from) params.set("from", from);
+	if (to) params.set("to", to);
+	const suffix = params.toString() ? `?${params.toString()}` : "";
+	return request<SalesSummary | AccountantSummary>(`/dashboard/summary${suffix}`);
+}
+
+export function listReports(filters: { status?: string; from?: string; to?: string } = {}) {
+	const params = new URLSearchParams();
+	if (filters.status) params.set("status", filters.status);
+	if (filters.from) params.set("from", filters.from);
+	if (filters.to) params.set("to", filters.to);
+	const suffix = params.toString() ? `?${params.toString()}` : "";
+	return request<ReportListRow[]>(`/reports${suffix}`);
+}
+
 export function submitReport(issueId: string, input: SubmitReportInput) {
 	return request<{ id: string }>(
 		`/issues/${encodeURIComponent(issueId)}/report`,
@@ -238,7 +251,7 @@ export async function uploadSlip(input: {
 	type: string;
 }) {
 	const form = new FormData();
-	if (Platform.OS === "web") {
+	if (!input.uri.startsWith("file://") && !input.uri.startsWith("content://")) {
 		const response = await fetch(input.uri);
 		const blob = await response.blob();
 		form.append("file", blob, input.name);
