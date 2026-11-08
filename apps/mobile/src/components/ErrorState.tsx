@@ -4,6 +4,7 @@ import { StyleSheet, View } from "react-native";
 import { colors, spacing } from "../constants/colors";
 import { Button } from "./Button";
 import { Text } from "./Text";
+import { ArrowClockwise, WarningCircle } from "phosphor-react-native";
 
 export function ErrorState({
 	message,
@@ -14,6 +15,7 @@ export function ErrorState({
 }) {
 	return (
 		<View style={styles.base}>
+			<WarningCircle color={colors.danger} size={30} />
 			<Text bold size={16} style={{ color: colors.danger }}>
 				Something went wrong
 			</Text>
@@ -23,6 +25,7 @@ export function ErrorState({
 			{onRetry ? (
 				<Button
 					label="Try again"
+					icon={<ArrowClockwise color={colors.primary} size={18} />}
 					variant="secondary"
 					onPress={onRetry}
 					style={styles.button}

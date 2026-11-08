@@ -3,6 +3,8 @@ import { StyleSheet, View } from "react-native";
 
 import { spacing } from "../constants/colors";
 import { Text } from "./Text";
+import { Package } from "phosphor-react-native";
+import { colors } from "../constants/colors";
 
 export function EmptyState({
 	title,
@@ -13,6 +15,7 @@ export function EmptyState({
 }) {
 	return (
 		<View style={styles.base}>
+			<Package color={colors.muted} size={32} />
 			<Text bold size={17}>
 				{title}
 			</Text>
