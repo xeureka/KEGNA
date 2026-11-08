@@ -1,0 +1,39 @@
+{
+	"name": "monolithflow",
+	"private": true,
+	"type": "module",
+	"module": "index.ts",
+	"scripts": {
+		"postinstall": "lefthook install",
+		"dev": "pnpm --parallel --filter back-end --filter client dev",
+		"dev:frontend": "pnpm --filter client dev",
+		"dev:backend": "pnpm --filter back-end dev",
+		"build": "tsc",
+		"start": "node dist/index.js",
+		"lint": "oxlint .",
+		"lint:fix": "oxlint . --fix",
+		"format": "oxfmt .",
+		"format:check": "oxfmt . --check",
+		"lint:backend": "pnpm --filter back-end lint",
+		"lint:frontend": "pnpm --filter front-end lint",
+		"lint:mobile": "pnpm --filter mobile lint",
+		"format:backend": "pnpm --filter back-end format",
+		"format:frontend": "pnpm --filter front-end format",
+		"format:mobile": "pnpm --filter mobile format"
+	},
+	"dependencies": {
+		"drizzle-orm": "^1.0.0-rc.4",
+		"zod": "^4.4.3"
+	},
+	"devDependencies": {
+		"@commitlint/cli": "^21.2.2",
+		"@commitlint/config-conventional": "^21.2.2",
+		"@types/bun": "latest",
+		"lefthook": "^2.1.10",
+		"oxfmt": "^0.65.0",
+		"oxlint": "^1.80.0"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	}
+}

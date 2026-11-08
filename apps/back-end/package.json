@@ -1,0 +1,71 @@
+{
+	"name": "back-end",
+	"version": "1.0.0",
+	"description": "",
+	"keywords": [],
+	"license": "ISC",
+	"author": "",
+	"type": "module",
+	"main": "index.js",
+	"scripts": {
+		"dev": "tsx watch --tsconfig ./tsconfig.json src/index.ts",
+		"build": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/index.js --sourcemap --packages=external",
+		"start": "node dist/index.js",
+		"seed": "tsx --tsconfig ./tsconfig.json src/db/seed.ts",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "drizzle-kit migrate",
+		"db:push": "drizzle-kit push",
+		"db:push:custom": "tsx --tsconfig ./tsconfig.json src/db/push-schema.ts",
+		"db:migrate:onboarding": "tsx --tsconfig ./tsconfig.json src/db/migrate-onboarding.ts",
+		"db:migrate:chapa-payments": "tsx --tsconfig ./tsconfig.json src/db/migrate-chapa-payments.ts",
+		"db:migrate:payments": "tsx --tsconfig ./tsconfig.json src/db/migrate-chapa-payments.ts",
+		"db:verify:payments": "tsx --tsconfig ./tsconfig.json src/db/verify-payment-schema.ts",
+		"db:migrate:roles": "tsx --tsconfig ./tsconfig.json src/db/migrate-roles.ts",
+		"db:migrate:payment-permissions": "tsx --tsconfig ./tsconfig.json src/db/migrate-payment-permissions.ts",
+		"db:check-auth-schema": "tsx --tsconfig ./tsconfig.json src/db/check-auth-schema.ts",
+		"test": "node --import tsx --test \"src/**/*.test.ts\"",
+		"healthcheck:local": "node scripts/check-local-auth.mjs",
+		"db:studio": "drizzle-kit studio",
+		"typecheck": "tsc --noEmit",
+		"lint": "oxlint .",
+		"lint:fix": "oxlint . --fix",
+		"format": "oxfmt .",
+		"format:check": "oxfmt . --check"
+	},
+	"dependencies": {
+		"@better-auth/expo": "^1.7.5",
+		"@hono/node-server": "^2.1.1",
+		"@hono/structured-logger": "^1.0.0",
+		"@hono/zod-openapi": "^1.6.1",
+		"@scalar/hono-api-reference": "^0.11.16",
+		"aws4fetch": "^1.0.20",
+		"better-auth": "^1.7.1",
+		"dotenv": "^17.4.2",
+		"drizzle-orm": "^0.45.2",
+		"hono": "^4.13.3",
+		"hono-rate-limiter": "^0.5.3",
+		"pg": "^8.23.0",
+		"pino": "^10.3.1",
+		"postgres": "^3.4.9",
+		"resend": "^6.22.0",
+		"zod": "^4.4.3"
+	},
+	"devDependencies": {
+		"@types/node": "^26.2.0",
+		"@types/pg": "^8.23.1",
+		"drizzle-kit": "^0.31.10",
+		"esbuild": "^0.28.2",
+		"oxfmt": "^0.65.0",
+		"oxlint": "^1.80.0",
+		"pino-pretty": "^13.1.3",
+		"tsx": "^4.23.12",
+		"typescript": "^7.0.2"
+	},
+	"devEngines": {
+		"packageManager": {
+			"name": "pnpm",
+			"version": "^11.21.0",
+			"onFail": "download"
+		}
+	}
+}

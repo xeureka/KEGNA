@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.pnpm-debug.log
+
+# Build Outputs & Compiled Files
+dist/
+build/
+/lib/
+*.tsbuildinfo
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+DEV-CREDENTIALS.md
+
+# Logs & Runtime Data
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+pinit.log
+*.pid
+*.seed
+*.pid.lock
+
+# OS Files & System Junk
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs, Editors & Debugging
+.vscode/
+.idea/
+*.swp
+*.swo
+*.iml
+.project
+.classpath
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# Testing & Coverage
+coverage/
+.nyc_output/
+
+# Docker Local Volumes (if applicable)
+postgres_data/
+
+note.ts

@@ -1,0 +1,19 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"categories": {
+		"correctness": "error",
+		"suspicious": "warn"
+	},
+	"env": {
+		"node": true,
+		"browser": true,
+		"es2024": true
+	},
+	"ignorePatterns": [
+		"**/dist/**",
+		"**/build/**",
+		"**/.expo/**",
+		"**/node_modules/**",
+		"**/drizzle/migrations/**"
+	]
+}

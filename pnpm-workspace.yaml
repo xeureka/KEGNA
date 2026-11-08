@@ -1,0 +1,9 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+allowBuilds:
+  "@scarf/scarf": false
+  esbuild: false
+  lefthook: false
+minimumReleaseAgeExclude:
+  - "@tanstack/query-core@5.102.5"
