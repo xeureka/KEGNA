@@ -162,3 +162,37 @@ These are blockers for the destructive portions of the requested downgrade. Phas
 | New admin screens | Users, products, overview. | BUILD |
 | New storekeeper screens | Receive stock, ledger, load-out, open issues, confirm returns, adjustments. | BUILD |
 | `apps/back-end/src/routes/v1/users.ts` | User listing is admin-only, leaving storekeepers unable to choose a salesperson for a load-out. | MODIFY: add `GET /users/sales` guarded by `issues.create` (minimal backend gap fix) |
+
+## Phase 5 — Mobile app assessment
+
+| Path / item | What it does | Verdict |
+|---|---|---|
+| `apps/mobile/App.tsx`, `src/AppRoot.tsx` | Expo root with old dental, payment, language, notification, avatar and tenant providers. | KEEP Expo/React Native foundation; MODIFY to auth gate and chat navigation |
+| `app.config.ts`, `eas.json` | Expo app identity and build metadata. | KEEP; MODIFY config import after removing tenant naming |
+| `config/tenant.config.ts`, `src/config/tenant.ts` | Tenant identity/branding/content and legacy flat tenant shape, including clinic copy. | RENAME to one neutral ZOLA app config; REMOVE tenant/clinic content |
+| `src/config/runtime.ts` | Derives API base URL from Expo host or `EXPO_PUBLIC_API_URL`. | KEEP host logic; MODIFY import and remove tenant runtime exports/copy |
+| `src/api/auth-client.ts` | Better Auth Expo client with SecureStore, phone plugin and tenant headers. | KEEP Better Auth Expo client; MODIFY storage keys, remove phone plugin/tenant headers |
+| `src/api/client.ts`, `src/api/storage.ts` | Envelope-aware API client, bearer persistence, old OTP/payment/CRM calls. | KEEP request/token/storage foundation; REWRITE endpoints and add thread/file/report hooks support |
+| `src/api/payment-checkout.ts` | Chapa checkout integration. | REMOVE |
+| `src/navigation/AppNavigator.tsx`, `routes.ts` | Old patient stack, bottom-tab graph and route table. | KEEP React Navigation dependencies; REMOVE graph; BUILD ChatList → Conversation + Profile stack |
+| `src/screens/**`, `src/components/**` | Dental auth, home, appointments, card, services, payments, profile screens and compositions. | REMOVE domain screens/components; KEEP generic Text/TextInput/Button/Card/Header patterns; BUILD chat/report/reconciliation UI |
+| `src/context/**`, `src/hooks/useChapaCheckout.ts` | Appointment, payment, tenant, language, avatar and notification state. | REMOVE; BUILD auth/session state |
+| `src/constants/dentalServices.ts`, `translations.ts`, `extendedTranslations.ts`, `src/i18n.ts` | Dental service catalogue and bilingual patient copy. | REMOVE |
+| `src/constants/colors.ts`, theme tokens | Existing ZOLA colors. | KEEP tokens unchanged; no new palette/gradients/shadows |
+| `src/styles/commonStyles.ts`, `bookingStyles.ts` | Old patient/dental visual styles. | REPLACE with neutral chat layout styles using existing tokens |
+| `src/types/index.ts` | Dental appointment/service/patient types. | REWRITE for inventory, threads, reports and files |
+| `src/utils/phone.ts`, `downloadReceipt.ts`, `alert.ts` | Phone/OTP helpers, receipt download, alert wrapper. | REMOVE phone/receipt; KEEP alert utility if still useful |
+| `assets/tooth-try.jpg` | Old dental asset. | REMOVE |
+| `dist/`, `package-lock.json`, app-local `pnpm-lock.yaml`, `note.ts` | Stale build/npm artifacts and scratch notes. | REMOVE |
+| New chat components and screens from plan section 10 | Telegram-style issue list, event timeline, report/deposit sheets, reconciliation, profile, wrong-role screen. | BUILD |
+
+### API contract notes
+
+- Sign-in uses the Better Auth Expo client (`/api/auth` email-password), then `/api/v1/auth/me` for role/permissions and bearer token.
+- Thread list rows: `{ issue, salesperson: { id, name }, lastEvent: { type, payload, createdAt }, lastEventAt, unreadCount }`.
+- Thread events: `{ id, issueId, actorId, type, payload, createdAt }`, cursor is `before` (date-time) with `limit` up to 100.
+- `GET /issues/{id}` returns `{ issue, salesperson, items, report, return_confirmation, verification, reconciliation }`; product names must be joined from `items[].product` and the event payloads' `productId`.
+- `POST /issues/{id}/report` takes `items[{ product_id, sold, returned, damaged }]` and `deposits[{ amount, bank_name, reference_no, slip_file_key, deposited_at? }]`; at least one of each.
+- `POST /files` returns `{ key, contentType, size }`; `GET /files/{key}` is an authenticated raw image response.
+- `POST /reports/{id}/verify` takes `{ decision: "approved" | "flagged", note? }`; approve requires confirmed returns and zero variances.
+- Event payloads omit product names, slip keys and actor names; the UI joins issue items/deposits and treats unknown actors as ZOLA team.

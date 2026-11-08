@@ -10,7 +10,8 @@
 		"web": "expo start --web --clear --lan",
 		"lint": "oxlint .",
 		"format": "oxfmt .",
-		"format:check": "oxfmt . --check"
+		"format:check": "oxfmt . --check",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@better-auth/expo": "^1.7.5",
