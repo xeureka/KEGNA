@@ -1,15 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Navigate, useNavigate } from "@tanstack/react-router";
-import {
-	Boxes,
-	ClipboardList,
-	Landmark,
-	LockKeyhole,
-	Eye,
-	EyeOff,
-	Package,
-	ShieldCheck,
-} from "lucide-react";
+import { Bank, ClipboardText, Cube, Eye, EyeSlash, LockKey, Package, ShieldCheck } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -28,17 +19,17 @@ type FormValues = z.infer<typeof schema>;
 
 const FEATURES = [
 	{
-		icon: Boxes,
+		icon: Cube,
 		label: "Live warehouse balances",
 		detail: "See what is in the warehouse and what is held by salespeople.",
 	},
 	{
-		icon: ClipboardList,
+		icon: ClipboardText,
 		label: "Load-outs and returns",
 		detail: "Issue racks, confirm returns and record damages in one flow.",
 	},
 	{
-		icon: Landmark,
+		icon: Bank,
 		label: "Cash reconciliation",
 		detail: "Match reported sales against bank deposits and expected cash.",
 	},
@@ -158,7 +149,7 @@ export function LoginPage() {
 							<Field label="Password" error={errors.password?.message}>
 								<div className="relative">
 									<Input type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="••••••••" className="pr-10" {...register("password")} />
-									<button type="button" className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button>
+									<button type="button" className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeSlash className="size-4" /> : <Eye className="size-4" />}</button>
 								</div>
 							</Field>
 
@@ -169,7 +160,7 @@ export function LoginPage() {
 					</div>
 
 					<p className="mt-6 flex items-start gap-2 text-xs leading-relaxed text-slate-400">
-						<LockKeyhole className="mt-0.5 size-3.5 shrink-0" />
+						<LockKey className="mt-0.5 size-3.5 shrink-0" />
 						Sales and accountants use the ZOLA mobile app. Contact an
 						administrator if you need a password reset.
 					</p>
