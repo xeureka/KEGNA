@@ -1,17 +1,17 @@
 /**
- * Build-time tenant configuration. Branding and clinic metadata are refreshed
- * from the backend at startup; only genuine build-time values belong here.
+ * Static single-tenant ZOLA build configuration.
+ *
+ * Phase 5 replaces the remaining legacy dental screens. Until then this file
+ * keeps the shape those screens expect while defining one fixed ZOLA identity.
  */
 const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL?.trim() ?? "";
 
 export const tenantConfig = {
 	identity: {
-		id:
-			process.env.EXPO_PUBLIC_TENANT_ID ??
-			"0ef815bd-15c3-4aff-b434-095ba4e5ad1a",
-		slug: process.env.EXPO_PUBLIC_TENANT_SLUG ?? "ahadu-dental",
-		displayName: process.env.EXPO_PUBLIC_TENANT_NAME ?? "Ahadu Dental",
-		appName: process.env.EXPO_PUBLIC_TENANT_NAME ?? "Ahadu Dental",
+		id: "zola",
+		slug: "zola",
+		displayName: "ZOLA",
+		appName: "ZOLA",
 	},
 	branding: {
 		colors: {
@@ -52,14 +52,13 @@ export const tenantConfig = {
 		homeTipTitle: "Protect your smile",
 		homeTip:
 			"Brush gently for two minutes, twice daily. Your next checkup is a great time to ask about sensitivity.",
-		about:
-			"helps you manage your dental care, appointments, records, and payments.",
+		about: "helps you manage your inventory, issues, reports, and deposits.",
 	},
 	features: { onlineBooking: true, payments: true, dentalHistory: true },
 	apiBaseUrl,
-	scheme: `nexa-${process.env.EXPO_PUBLIC_TENANT_SLUG ?? "ahadu-dental"}`,
+	scheme: "zola",
 	build: {
-		bundleIdentifier: `com.nexa.${(process.env.EXPO_PUBLIC_TENANT_SLUG ?? "ahadu-dental").replaceAll("-", "")}`,
+		bundleIdentifier: "com.zola.app",
 		version: "1.0.0",
 		easProjectId: "807a1e65-5dc1-4f2b-ab1c-251964fb4d30",
 	},
@@ -68,11 +67,6 @@ export const tenantConfig = {
 export type TenantConfig = typeof tenantConfig;
 
 export function assertTenantConfig() {
-	if (!/^[0-9a-f-]{36}$/i.test(tenantConfig.identity.id)) {
-		throw new Error(
-			"Set EXPO_PUBLIC_TENANT_ID to the UUID returned by provisioning.",
-		);
-	}
 	if (!tenantConfig.identity.slug)
-		throw new Error("Mobile tenant slug is not configured.");
+		throw new Error("Mobile app identity is not configured.");
 }
