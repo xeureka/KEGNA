@@ -15,6 +15,8 @@ import type {
 	SalesSummary,
 	PersonalStock,
 	BeverageReport,
+	FinancePayment,
+	Product,
 } from "../types";
 import { mobileStorage } from "./storage";
 

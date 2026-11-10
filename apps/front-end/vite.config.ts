@@ -21,6 +21,9 @@ export default defineConfig({
 		alias: {
 			"@": fileURLToPath(new URL("./src", import.meta.url)),
 		},
+		// Force a single copy of React so TanStack Router and the app
+		// share the same instance (fixes "Invalid hook call").
+		dedupe: ["react", "react-dom"],
 	},
 	server: {
 		// Bind both IPv4 and IPv6 so localhost, 127.0.0.1, and LAN browser

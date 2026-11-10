@@ -1,6 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
+nodeLinker: hoisted
 allowBuilds:
   "@scarf/scarf": false
   esbuild: false
